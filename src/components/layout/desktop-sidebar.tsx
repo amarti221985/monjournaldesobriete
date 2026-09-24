@@ -22,7 +22,11 @@ export function DesktopSidebar() {
         <ul className="flex flex-col gap-1">
           {primaryNavigation.map((item) => (
             <li key={item.href}>
-              <NavLink item={item} variant="sidebar" />
+              <NavLink
+                item={{ label: item.label, shortLabel: item.shortLabel, href: item.href, available: item.available }}
+                icon={<item.icon className="size-[1.125rem]" aria-hidden="true" />}
+                variant="sidebar"
+              />
             </li>
           ))}
         </ul>
@@ -30,7 +34,11 @@ export function DesktopSidebar() {
         <ul className="flex flex-col gap-1">
           {secondaryNavigation.map((item) => (
             <li key={item.href}>
-              <NavLink item={item} variant="sidebar" />
+              <NavLink
+                item={{ label: item.label, shortLabel: item.shortLabel, href: item.href, available: item.available }}
+                icon={<item.icon className="size-[1.125rem]" aria-hidden="true" />}
+                variant="sidebar"
+              />
             </li>
           ))}
         </ul>

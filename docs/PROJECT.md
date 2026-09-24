@@ -51,8 +51,8 @@ plusieurs substances (alcool, cannabis, nicotine, stimulants, opioïdes, autres)
 | Sprint | Contenu | État |
 | --- | --- | --- |
 | 0 | Fondations techniques | ✅ Terminé |
-| 1 | Authentification et profils | À venir |
-| 2 | Onboarding | |
+| 1 | Authentification et profils | ✅ Terminé |
+| 2 | Onboarding | À venir |
 | 3 | Check-in quotidien | |
 | 4 | Dashboard | |
 | 5 | Calendrier et journal | |

@@ -15,8 +15,10 @@ import type { Database } from "@/types/database";
  * seul, dont le contenu provient des cookies sans vérification.
  */
 export async function createClient() {
-  const { url, publishableKey } = getSupabaseEnv();
+  // cookies() d'abord : rend la route dynamique avant toute validation d'environnement,
+  // pour que le build ne dépende jamais des clés Supabase.
   const cookieStore = await cookies();
+  const { url, publishableKey } = getSupabaseEnv();
 
   return createServerClient<Database>(url, publishableKey, {
     cookies: {
@@ -30,7 +32,7 @@ export async function createClient() {
           );
         } catch {
           // Appelé depuis un Server Component : les cookies y sont en lecture seule.
-          // Le rafraîchissement de session sera assuré par le proxy (Sprint 1).
+          // Le rafraîchissement de session est assuré par src/proxy.ts.
         }
       },
     },

@@ -15,64 +15,75 @@
 | Tests | Vitest | 5.0.x |
 | Runtime | Node.js 24 LTS recommandé (minimum 20.9, exigence de Next 16) | |
 
-Ajoutés plus tard, au sprint qui les utilise : Recharts (Sprint 6), React Hook Form
-(Sprint 1 ou 3 selon les formulaires).
+Aussi : `server-only` (empêche l'import de code serveur dans le client).
+
+Ajoutés plus tard, au sprint qui les utilise : Recharts (Sprint 6). React Hook Form n'a pas
+été nécessaire au Sprint 1 (formulaires courts : Server Actions + Zod) ; il sera réévalué pour
+le check-in (Sprint 3).
 
 ## Structure des dossiers
 
 ```text
 src/
+  proxy.ts                  Proxy Next 16 : rafraîchissement de session + redirections d'accès
   app/                      Routes (App Router)
-    (marketing)/            Pages publiques : accueil, puis confidentialité, conditions
+    (marketing)/            Pages publiques : accueil (puis confidentialité, conditions)
+    (auth)/                 login, signup, forgot-password, reset-password (+ layout)
+    (app)/                  Zone authentifiée : layout (AppShell) + today/
+    auth/callback/route.ts  Callback Supabase Auth (confirmation, réinitialisation)
     layout.tsx              Layout racine : police, metadata, providers
     globals.css             Design tokens + Tailwind
-    error.tsx               Erreur d'un segment
-    global-error.tsx        Erreur du layout racine
-    not-found.tsx           404
-    loading.tsx             Chargement (Suspense)
-    icon.svg                Favicon
+    error.tsx, global-error.tsx, not-found.tsx, loading.tsx, icon.svg
+  features/                 Code par fonctionnalité (ADR-022)
+    auth/
+      actions.ts            Server Actions : inscription, connexion, oubli, reset, déconnexion
+      schemas.ts            Schémas Zod partagés client / serveur
+      errors.ts             Erreurs Supabase → messages humains (anti-énumération)
+      components/           Formulaires, AuthCard, UserMenu, SignOutButton
+    profile/
+      actions.ts            Enregistrement du fuseau détecté
+      components/           TimezoneSync
   components/
     ui/                     Composants shadcn/ui (code possédé, modifiable)
-    layout/                 Structure : SiteHeader/Footer, AppShell, sidebar, nav mobile, PageHeader, PageContainer
-    shared/                 Petits composants transverses (BrandMark, StatusMessage)
-  config/                   Configuration centralisée : site, routes, navigation, états visuels des journées
+    layout/                 SiteHeader/Footer, AppShell, AppHeader, sidebar, nav mobile, PageHeader, PageContainer
+    forms/                  FormField, PasswordInput, SubmitButton, FormAlert
+    shared/                 BrandMark, StatusMessage
+  config/                   site, routes (+ zones protégées / redirections autorisées), navigation, day-status
+  hooks/                    use-client-validation
   lib/
     env.ts                  Validation des variables d'environnement (Zod)
-    supabase/               Clients Supabase navigateur / serveur
+    forms.ts                État des formulaires, erreurs Zod par champ
+    timezone.ts             Validation / détection des fuseaux IANA
+    auth/redirects.ts       getSafeRedirect, resolveProxyRedirect (pur, testé)
+    auth/session.ts         getCurrentUser, requireUser (server-only)
+    services/profiles.ts    getCurrentProfile, saveTimezoneIfMissing (server-only)
+    supabase/               Clients navigateur / serveur / proxy
     utils.ts                cn()
   types/
     database.ts             Types générés depuis le schéma Supabase
 supabase/
   config.toml               Configuration CLI Supabase
-  migrations/               Migrations SQL versionnées (créé à la première migration, Sprint 1)
+  migrations/               Migrations SQL versionnées
+  tests/                    Scripts SQL de vérification (RLS)
   README.md                 Commandes et règles de migration
 docs/                       Documentation projet
 ```
 
 Les dossiers sont créés **lorsqu'ils contiennent réellement quelque chose**. À venir :
-
-- `src/app/(auth)/` : login, signup, mot de passe oublié (Sprint 1) ;
-- `src/app/(app)/` : application authentifiée (`/today`, `/calendar`, `/journal`, `/progress`, `/plan`, `/settings`) ;
-- `src/lib/validation/` : schémas Zod métier ;
-- `src/lib/services/` : accès aux données ;
-- `src/lib/domain/` (ou équivalent) : logique métier pure (séries, statistiques, dates) ;
-- `src/components/<domaine>/` : composants par fonctionnalité (`check-in/`, `calendar/`, ...) ;
-- `src/hooks/`.
+logique métier pure (séries, statistiques, dates locales) dans `src/lib/domain/` ou dans la
+fonctionnalité concernée, et une fonctionnalité par dossier dans `src/features/`.
 
 ## Route groups
 
 | Groupe | Rôle | Layout |
 | --- | --- | --- |
-| `(marketing)` | Public. Accueil temporaire au Sprint 0. | `SiteHeader` + `SiteFooter` |
-| `(auth)` | Connexion, inscription, réinitialisation (Sprint 1). | Layout centré minimal |
-| `(app)` | Application authentifiée. | `AppShell` (sidebar desktop + barre inférieure mobile) |
+| `(marketing)` | Public. Accueil temporaire. | `SiteHeader` + `SiteFooter` |
+| `(auth)` | Connexion, inscription, mot de passe oublié, nouveau mot de passe. | Marque + carte centrée, retour à l'accueil |
+| `(app)` | Application authentifiée (`/today`). | `AppShell` (sidebar desktop, barre inférieure mobile, menu utilisateur) |
 
-Un seul layout racine (`src/app/layout.tsx`) : le `not-found` global reste simple.
-
-`AppShell`, `DesktopSidebar`, `MobileNavigation`, `PageHeader` et `PageContainer` existent
-déjà dans `src/components/layout/`, mais ne sont montés nulle part : `src/app/(app)/layout.tsx`
-sera créé avec la première page authentifiée, derrière la protection d'accès du Sprint 1.
-Ainsi, aucune navigation vers des routes inexistantes n'est visible.
+Un seul layout racine (`src/app/layout.tsx`). La navigation de l'app n'affiche en lien que les
+sections disponibles (`available: true` dans `src/config/navigation.ts`) ; les autres sont
+désactivées avec la mention « Bientôt ».
 
 ## Stratégie frontend / backend
 
@@ -90,20 +101,64 @@ Ainsi, aucune navigation vers des routes inexistantes n'est visible.
 ## Supabase
 
 - `src/lib/supabase/client.ts` : `createBrowserClient` pour les Client Components.
-- `src/lib/supabase/server.ts` : `createServerClient` + `cookies()` de Next.js, un client par requête.
-- Les deux utilisent l'**URL du projet** et la **clé publiable** (`sb_publishable_...`),
-  validées par `src/lib/env.ts`. La sécurité des données repose sur la **RLS**, pas sur la clé.
-- Les clients sont typés avec `Database` (`src/types/database.ts`), régénéré après chaque migration.
-- Aucune clé secrète / service role n'est utilisée pour l'instant.
+- `src/lib/supabase/server.ts` : `createServerClient` + `cookies()`, un client par requête.
+  `cookies()` est lu **avant** la validation des variables : les routes deviennent dynamiques et
+  le build ne dépend jamais des clés.
+- `src/lib/supabase/proxy.ts` : `updateSession()` (approche officielle `@supabase/ssr`) et
+  `redirectWithSession()` (conserve les cookies rafraîchis lors d'une redirection).
+- URL du projet + **clé publiable** uniquement, validées par `src/lib/env.ts`. La sécurité des
+  données repose sur la **RLS**. Aucune clé secrète n'est utilisée.
+- Clients typés avec `Database` (`src/types/database.ts`, `npm run db:types`).
 
-## Authentification prévue (Sprint 1)
+## Authentification (Sprint 1)
 
-- Supabase Auth (courriel + mot de passe), sessions stockées en cookies via `@supabase/ssr`.
-- `src/proxy.ts` (convention Next 16, anciennement `middleware.ts`) pour rafraîchir la session
-  à chaque navigation et rediriger les routes `(app)` non authentifiées.
-- Vérification de l'identité côté serveur avec `supabase.auth.getClaims()` / `getUser()`,
-  jamais avec un `user_id` fourni par le client.
-- Protection des données par RLS en base, indépendamment du frontend.
+### Sessions et protection (ADR-018)
+
+1. **Proxy** (`src/proxy.ts`, toutes les routes hors fichiers statiques) : rafraîchit la session
+   via `getClaims()`, puis applique `resolveProxyRedirect()` :
+   - visiteur sur une zone protégée → `/login?next=<chemin>` ;
+   - utilisateur connecté sur `/login` ou `/signup` → `getAuthenticatedHomeRoute()` (`/today`,
+     puis `/onboarding` selon `onboarding_completed` au Sprint 2).
+   Si Supabase n'est pas configuré, les pages publiques restent accessibles.
+2. **Serveur** : le layout `(app)`, les pages protégées et les Server Actions appellent
+   `requireUser()` / `getCurrentUser()` (`getClaims()` = JWT vérifié, mémorisé par requête).
+3. **Base** : RLS sur `profiles`.
+
+### Parcours
+
+| Parcours | Étapes |
+| --- | --- |
+| Inscription | `/signup` → `signUpAction` (Zod) → `auth.signUp` avec `display_name` et `timezone` en métadonnées → trigger `handle_new_user` crée le profil. Confirmation désactivée : session immédiate → `/today`. Activée : écran « Vérifie tes courriels » → lien → `/auth/callback` → `/today`. |
+| Connexion | `/login?next=...` → `signInAction` → `auth.signInWithPassword` → `getSafeRedirect(next)`. Message générique en cas d'échec. |
+| Mot de passe oublié | `/forgot-password` → `auth.resetPasswordForEmail` (retour : `/auth/callback?next=/reset-password`) → message identique que le compte existe ou non. |
+| Réinitialisation | lien → `/auth/callback` (session de récupération) → `/reset-password` → `auth.updateUser({ password })` → « Ton mot de passe a été mis à jour. » → accès à l'espace. Sans session : écran « Lien expiré ». |
+| Déconnexion | menu utilisateur ou bouton → `signOutAction` → `/login`. |
+
+### Callback `/auth/callback`
+
+Accepte `?code=` (PKCE, `exchangeCodeForSession`) et `?token_hash=&type=` (`verifyOtp`).
+`next` est validé par `getSafeRedirect` (`recovery` → `/reset-password` par défaut). Échec →
+`/login?error=link_invalid` (code connu, jamais de texte arbitraire dans l'URL).
+Les URL de retour sont construites depuis `NEXT_PUBLIC_SITE_URL` ; configuration Supabase :
+[SUPABASE_SETUP.md](./SUPABASE_SETUP.md).
+
+### Profil courant
+
+`getCurrentProfile()` (`src/lib/services/profiles.ts`) lit le profil de l'utilisateur connecté,
+mémorisé par requête. Pas de Context React global : les données serveur sont passées en props.
+`TimezoneSync` enregistre le fuseau du navigateur si le profil n'en a pas (ADR-019).
+
+### Formulaires
+
+- Server Actions + `useActionState` ; état `idle | success | error` (`src/lib/forms.ts`),
+  `pending` fourni par React (bouton désactivé, indicateur de chargement).
+- Validation client **et** serveur avec le même schéma Zod (`useClientValidation` bloque la
+  soumission invalide et place le focus sur le premier champ en erreur).
+- Accessibilité : `FormField` relie libellé, aide et erreur (`aria-invalid`, `aria-describedby`) ;
+  message global `role="alert"` / `role="status"` ; `autocomplete` adapté ; mot de passe
+  affichable / masquable.
+- Journalisation : codes d'erreur techniques uniquement (jamais courriel, mot de passe, jeton,
+  cookie ni contenu du profil).
 
 ## Conventions de composants
 
@@ -152,5 +207,7 @@ Ainsi, aucune navigation vers des routes inexistantes n'est visible.
 
 - Vitest (`npm test`), fichiers `*.test.ts` colocalisés avec le code testé.
 - Sprint 0 : validation des variables d'environnement.
+- Sprint 1 : redirections sûres, accès proxy, schémas d'authentification, messages d'erreur, fuseaux.
+- SQL : `supabase/tests/profiles_rls.sql` (RLS et triggers de `profiles`, voir DATABASE.md).
 - Priorité future : séries, statistiques, dates locales/fuseaux, validation, RLS.
 - Playwright (tests de parcours) sera ajouté quand les premiers parcours existeront.

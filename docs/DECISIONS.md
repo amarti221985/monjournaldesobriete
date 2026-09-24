@@ -21,6 +21,15 @@ acceptée : on en ajoute une nouvelle qui la remplace (statut « Remplacée par 
 | 013 | Langue et ton de l'interface | Acceptée |
 | 014 | Projet hors OneDrive | Acceptée |
 | 015 | Vitest dès le Sprint 0 | Acceptée |
+| 016 | Supabase Auth par courriel et mot de passe | Acceptée |
+| 017 | Création du profil par trigger PostgreSQL | Acceptée |
+| 018 | Protection des routes côté serveur | Acceptée |
+| 019 | Fuseaux horaires IANA | Acceptée |
+| 020 | `updated_at` maintenu par la base | Acceptée |
+| 021 | Redirections internes par liste blanche | Acceptée |
+| 022 | Code organisé par fonctionnalité (`src/features/`) | Acceptée |
+| 023 | Anti-abus et courriels : protections Supabase d’abord | Acceptée |
+| 024 | Liens de courriel : PKCE par défaut, `token_hash` recommandé | Acceptée |
 
 ---
 
@@ -189,3 +198,112 @@ acceptée : on en ajoute une nouvelle qui la remplace (statut « Remplacée par 
   Playwright sera ajouté quand des parcours utilisateur existeront.
 - **Reason** : léger, rapide, compatible TypeScript et alias `@/*` sans configuration lourde ;
   prêt pour les fonctions critiques (séries, dates, statistiques).
+
+## ADR-016 — Supabase Auth par courriel et mot de passe
+
+- **Context** : il faut une authentification fiable dès le Sprint 1, sans gérer soi-même les
+  mots de passe, la réinitialisation ni les sessions.
+- **Decision** : Supabase Auth (courriel + mot de passe) via `@supabase/ssr`, sessions en cookies.
+  Mot de passe : **8 à 72 caractères**, sans règle de composition (majuscule, chiffre, symbole).
+  Nom d'affichage requis (2 à 80 caractères).
+- **Reason** : les mots de passe ne transitent jamais par notre base ; la longueur protège mieux
+  qu'une composition imposée (recommandations NIST) ; 72 est la limite réelle de bcrypt côté
+  Supabase. Le nom d'affichage permet un accueil personnel dès la première visite.
+- **Consequences** : la même règle est configurée dans le dashboard (longueur minimale 8).
+  Messages d'erreur génériques pour ne pas révéler l'existence d'un compte.
+
+## ADR-017 — Création du profil par trigger PostgreSQL
+
+- **Context** : chaque compte `auth.users` doit avoir un profil, même si l'utilisateur ferme
+  son navigateur juste après l'inscription.
+- **Decision** : trigger `on_auth_user_created` (`AFTER INSERT` sur `auth.users`) appelant
+  `public.handle_new_user()` (`SECURITY DEFINER`, `search_path` vide). `display_name` et
+  `timezone` proviennent des métadonnées d'inscription, **revalidées** dans le trigger.
+- **Reason** : création atomique avec le compte, indépendante du frontend ; aucune politique
+  `INSERT` n'est nécessaire (least privilege).
+- **Consequences** : les métadonnées étant modifiables par le client, elles ne sont qu'une
+  valeur initiale ; une valeur invalide devient `NULL` sans bloquer l'inscription. Toute
+  évolution du profil initial passe par une migration de cette fonction.
+
+## ADR-018 — Protection des routes côté serveur
+
+- **Context** : un contrôle uniquement dans le navigateur ou uniquement dans le proxy peut être
+  contourné (matcher mal configuré, appel direct d'une Server Action).
+- **Decision** : trois niveaux :
+  1. `src/proxy.ts` rafraîchit la session et redirige (`/today` → `/login?next=...`,
+     `/login` connecté → `/today`) ;
+  2. le layout `(app)` et chaque page / Server Action protégée appellent `requireUser()` /
+     `getCurrentUser()` (`src/lib/auth/session.ts`) ;
+  3. la RLS en base.
+  L'identité est établie avec `supabase.auth.getClaims()` (JWT vérifié), jamais `getSession()` seul.
+- **Reason** : défense en profondeur ; recommandation Next.js 16 (« vérifier dans chaque
+  Server Function ») et Supabase.
+- **Consequences** : `getCurrentUser` et `getCurrentProfile` sont mémorisés par requête
+  (React `cache`) pour éviter les requêtes dupliquées. Pas de Context React global pour
+  l'utilisateur : les données sont lues côté serveur et passées en props.
+
+## ADR-019 — Fuseaux horaires IANA
+
+- **Context** : les journées locales (ADR-006) exigent de connaître le fuseau de l'utilisateur,
+  y compris lors des changements d'heure.
+- **Decision** : `profiles.timezone` stocke un identifiant IANA (`America/Toronto`), jamais un
+  décalage (`UTC-4`). Détection via `Intl.DateTimeFormat().resolvedOptions().timeZone` :
+  transmise à l'inscription, sinon enregistrée à la première visite de l'app (`TimezoneSync`)
+  si le profil n'en a pas. Validation côté application (`isValidTimeZone`) et côté base
+  (forme par `CHECK`, existence par `pg_timezone_names` dans le trigger).
+- **Reason** : un identifiant IANA suit les règles d'heure d'été ; un décalage fixe devient faux
+  deux fois par an.
+- **Consequences** : la détection n'écrase jamais un fuseau existant et ne bloque jamais l'accès.
+  Modification manuelle prévue dans les paramètres (sprint ultérieur).
+
+## ADR-020 — `updated_at` maintenu par la base
+
+- **Decision** : fonction réutilisable `public.set_updated_at()` attachée en `BEFORE UPDATE` à
+  chaque table possédant `updated_at` ; `created_at` a une valeur par défaut `now()`.
+  `clock_timestamp()` est utilisé pour refléter l'instant réel de la modification.
+- **Reason** : aucune dépendance à l'horloge du navigateur ni oubli possible dans le code.
+- **Consequences** : l'application n'envoie jamais `created_at` ni `updated_at` (colonnes non
+  modifiables par `authenticated`).
+
+## ADR-021 — Redirections internes par liste blanche
+
+- **Context** : le paramètre `next` (connexion, callback Auth) peut servir à une redirection
+  ouverte vers un site malveillant.
+- **Decision** : `getSafeRedirect()` (`src/lib/auth/redirects.ts`) n'accepte qu'un chemin interne
+  normalisé appartenant à `postAuthRedirectPrefixes` (`src/config/routes.ts`) ; sinon destination
+  par défaut. Refuse URL absolues, `//`, `\`, `javascript:`, caractères de contrôle, traversées.
+- **Consequences** : fonction pure couverte par des tests ; toute nouvelle zone protégée doit
+  être ajoutée à `protectedRoutePrefixes`.
+
+## ADR-022 — Code organisé par fonctionnalité (`src/features/`)
+
+- **Context** : l'authentification combine schémas, Server Actions, messages et composants.
+- **Decision** : `src/features/<domaine>/` regroupe `actions.ts`, `schemas.ts`, `errors.ts` et
+  `components/` d'une fonctionnalité. Restent transverses : `src/components/{ui,layout,forms,shared}`,
+  `src/lib/` (Supabase, auth, services, utilitaires), `src/config/`.
+- **Reason** : cohésion par fonctionnalité, fichiers courts, pas d'abstraction inutile.
+- **Consequences** : remplace l'idée `src/components/<domaine>/` et `src/lib/validation/`
+  évoquée au Sprint 0 ; les schémas Zod vivent dans leur fonctionnalité.
+
+## ADR-023 — Anti-abus et courriels : protections Supabase d'abord
+
+- **Decision** : pas de rate limiting applicatif, de CAPTCHA ni de fournisseur de courriel
+  externe au Sprint 1 ; on s'appuie sur les limites intégrées de Supabase Auth.
+- **Consequences** — à faire **avant un lancement public** :
+  - SMTP personnalisé (délivrabilité, expéditeur, volume) ;
+  - CAPTCHA Supabase (Attack Protection) si des abus apparaissent : le formulaire transmettra
+    `options.captchaToken` ;
+  - rate limiting applicatif (ex. par IP sur les Server Actions d'authentification) si les
+    limites Supabase ne suffisent pas.
+  - Contenu des courriels et notifications toujours **discret** (aucune mention de sobriété,
+    dépendance ou substance).
+
+## ADR-024 — Liens de courriel : PKCE par défaut, `token_hash` recommandé
+
+- **Context** : `@supabase/ssr` utilise le flux PKCE ; le lien par défaut ne fonctionne que dans
+  le navigateur qui a fait la demande.
+- **Decision** : `/auth/callback` accepte `?code=` (PKCE) **et** `?token_hash=&type=`
+  (`verifyOtp`). Les modèles de courriel recommandés utilisent `token_hash`
+  (docs/SUPABASE_SETUP.md).
+- **Consequences** : l'application fonctionne avec les modèles par défaut ; la personnalisation
+  des modèles rend les liens utilisables sur un autre appareil.

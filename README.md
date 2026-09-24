@@ -6,7 +6,7 @@ Webapp de journal de sobriété : check-in quotidien, suivi des envies et décle
 réflexions, visualisation de la progression. Outil de journalisation et de suivi personnel —
 il ne remplace pas les conseils ou soins d'un professionnel de la santé.
 
-État : **Sprint 0 — fondations techniques** (voir [docs/PROJECT.md](docs/PROJECT.md)).
+État : **Sprint 1 — authentification et profils** (voir [docs/PROJECT.md](docs/PROJECT.md)).
 
 ## Stack
 
@@ -37,11 +37,11 @@ cp .env.example .env.local
 | --- | --- | --- |
 | `NEXT_PUBLIC_SUPABASE_URL` | Oui* | URL du projet Supabase (`https://<ref>.supabase.co`) |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Oui* | Clé publiable Supabase (`sb_publishable_...`) |
-| `NEXT_PUBLIC_SITE_URL` | Non | URL publique de l'app (défaut `http://localhost:3000`) |
+| `NEXT_PUBLIC_SITE_URL` | En production | URL publique de l'app (défaut `http://localhost:3000`). Sert à construire les liens des courriels d'authentification. |
 
-\* Validées au premier usage d'un client Supabase (`src/lib/env.ts`) : la page d'accueil
-fonctionne sans elles, mais toute fonctionnalité Supabase affichera une erreur explicite si
-elles manquent.
+\* Validées au premier usage d'un client Supabase (`src/lib/env.ts`) : le build et la page
+d'accueil fonctionnent sans elles, mais l'authentification et l'espace personnel affichent
+une erreur explicite si elles manquent.
 
 Où les trouver : Dashboard Supabase → **Project Settings → API Keys** (clé publiable) et
 **Data API** (URL).
@@ -66,6 +66,7 @@ Puis ouvrir <http://localhost:3000>.
 | `npm run build` | Build de production |
 | `npm start` | Démarre le build de production |
 | `npm run check` | Typecheck + lint + tests + build |
+| `npm run db:types` | Régénère `src/types/database.ts` depuis le projet Supabase lié |
 
 ## Supabase
 
@@ -77,10 +78,12 @@ npx supabase login
 npx supabase link --project-ref <project-ref>
 npx supabase migration new <nom>        # créer une migration
 npx supabase db push                    # appliquer les migrations
-npx supabase gen types typescript --linked > src/types/database.ts
+npm run db:types                        # régénérer les types
 ```
 
-Détails et conventions : [docs/DATABASE.md](docs/DATABASE.md).
+Configuration du projet (URLs de redirection, confirmation du courriel, modèles de courriel,
+vérification RLS) : [docs/SUPABASE_SETUP.md](docs/SUPABASE_SETUP.md).
+Schéma et conventions : [docs/DATABASE.md](docs/DATABASE.md).
 
 ## Build
 
@@ -98,7 +101,9 @@ npm start
    `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `NEXT_PUBLIC_SITE_URL=https://ton-domaine`).
    Les variables `NEXT_PUBLIC_*` sont intégrées **au moment du build** : redéployer après
    les avoir modifiées.
-5. HTTPS activé sur le domaine.
+5. Dans Supabase, ajouter `https://ton-domaine/auth/callback` aux Redirect URLs et régler
+   la Site URL (voir [docs/SUPABASE_SETUP.md](docs/SUPABASE_SETUP.md)).
+6. HTTPS activé sur le domaine.
 
 Aucune dépendance à Vercel : l'app est un serveur Node standard.
 
@@ -108,4 +113,5 @@ Aucune dépendance à Vercel : l'app est un serveur Node standard.
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — structure, conventions, stratégie technique
 - [docs/DATABASE.md](docs/DATABASE.md) — principes de base de données, migrations, RLS, dates
 - [docs/DECISIONS.md](docs/DECISIONS.md) — journal des décisions d'architecture (ADR)
+- [docs/SUPABASE_SETUP.md](docs/SUPABASE_SETUP.md) — configuration Supabase (Auth, URLs, courriels)
 - [docs/MASTER_PROMPT.md](docs/MASTER_PROMPT.md) — cahier des charges maître

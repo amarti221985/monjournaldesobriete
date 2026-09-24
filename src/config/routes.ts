@@ -1,14 +1,17 @@
 /**
- * Routes centralisées. Les routes marquées « Sprint N » n'existent pas encore :
- * ne pas les afficher dans une navigation visible avant leur implémentation.
+ * Routes centralisées. Ne jamais écrire ces chemins en dur ailleurs.
  */
 export const routes = {
   home: "/",
-  // Sprint 1 — authentification
+  // Authentification (Sprint 1)
   login: "/login",
   signup: "/signup",
-  // Sprints 3 à 8 — application authentifiée
+  forgotPassword: "/forgot-password",
+  resetPassword: "/reset-password",
+  authCallback: "/auth/callback",
+  // Application authentifiée
   today: "/today",
+  // Sprints 3 à 8 — pas encore implémentées
   calendar: "/calendar",
   journal: "/journal",
   progress: "/progress",
@@ -17,3 +20,25 @@ export const routes = {
 } as const;
 
 export type AppRoute = (typeof routes)[keyof typeof routes];
+
+/** Zone authentifiée : accès réservé aux utilisateurs connectés. */
+export const protectedRoutePrefixes: readonly string[] = [
+  routes.today,
+  routes.calendar,
+  routes.journal,
+  routes.progress,
+  routes.plan,
+  routes.settings,
+];
+
+/** Pages réservées aux visiteurs non connectés (un utilisateur connecté est redirigé). */
+export const guestOnlyRoutes: readonly string[] = [routes.login, routes.signup];
+
+/**
+ * Destinations internes autorisées après une authentification (paramètre `next`).
+ * Toute autre destination est remplacée par la destination par défaut.
+ */
+export const postAuthRedirectPrefixes: readonly string[] = [
+  ...protectedRoutePrefixes,
+  routes.resetPassword,
+];

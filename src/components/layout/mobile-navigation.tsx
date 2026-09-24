@@ -11,7 +11,11 @@ export function MobileNavigation() {
       <ul className="mx-auto flex max-w-lg items-stretch justify-between gap-1 px-2">
         {primaryNavigation.map((item) => (
           <li key={item.href} className="flex min-w-0 flex-1">
-            <NavLink item={item} variant="bottom-bar" />
+            <NavLink
+              item={{ label: item.label, shortLabel: item.shortLabel, href: item.href, available: item.available }}
+              icon={<item.icon className="size-5" aria-hidden="true" />}
+              variant="bottom-bar"
+            />
           </li>
         ))}
       </ul>
