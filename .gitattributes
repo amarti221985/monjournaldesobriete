@@ -1,0 +1,6 @@
+# Fins de ligne LF dans le dépôt (déploiement Linux), quel que soit l OS du poste
+* text=auto eol=lf
+*.ico binary
+*.png binary
+*.jpg binary
+*.woff2 binary
