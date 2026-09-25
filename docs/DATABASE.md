@@ -1,7 +1,7 @@
 # Base de données
 
 > Le schéma est construit progressivement, sprint par sprint.
-> Sprint 1 : table `profiles` (voir [Schéma actuel](#schéma-actuel)).
+> Sprint 1 : `profiles`. Sprint 2 : catalogue `substances` et données du parcours (voir [Schéma actuel](#schéma-actuel)).
 
 ## Plateforme
 
@@ -139,6 +139,66 @@ Vérification complémentaire depuis l'application : deux comptes de test fictif
 la session de A, `supabase.from("profiles").select()` ne retourne que le profil de A, et
 `update(...).eq("id", B)` ne modifie aucune ligne.
 
+### Onboarding — migrations `20260925090000_create_onboarding.sql`, `20260925100000_allow_onboarding_draft_upsert.sql`
+
+**Enums** : `substance_goal` (`abstinence` | `reduction` | `observation`) ;
+`motivation` (`health`, `energy`, `sleep`, `relationships`, `family`, `confidence`, `finances`,
+`career`, `freedom`, `clarity`, `personal_project`, `other`).
+
+| Table | Rôle | Colonnes principales | Contraintes |
+| --- | --- | --- | --- |
+| `substances` | Catalogue global (lecture seule) | `slug` unique, `name_fr`, `category` (`substance` \| `other`), `is_active`, `sort_order` | format du slug, longueur du nom |
+| `user_substances` | Substances suivies | `user_id`, `substance_id`, `custom_name`, `goal`, `started_on date`, `is_primary`, `is_active` | 1 relation active par substance ; 1 principale active ; `custom_name` 1-80 ; `started_on ≥ 1900-01-01` |
+| `personal_reasons` | « Pourquoi » | `user_id`, `reason_text` | 1-2000 caractères (hors espaces) |
+| `user_motivations` | Motivations | `user_id`, `motivation`, `custom_label` | unique (`user_id`, `motivation`) ; `custom_label` seulement pour `other` |
+| `support_contacts` | Personnes de soutien | `user_id`, `name`, `relationship`, `phone`, `email` | nom 1-80 ; relation ≤ 60 ; téléphone souple `[0-9+(). -]{3,32}` ; courriel simple ≤ 254 |
+| `onboarding_drafts` | Brouillon du wizard | `user_id` (PK), `current_step` 1-8, `data jsonb` | objet JSON ≤ 16 Ko |
+
+- Toutes les tables utilisateur : `user_id default auth.uid() references auth.users on delete cascade`,
+  `created_at` / `updated_at` maintenus par la base (`set_updated_at()` réutilisé).
+- **Index** : index uniques partiels ci-dessus + index `user_id` sur `user_substances`,
+  `personal_reasons`, `support_contacts` (accès par utilisateur et RLS). Pas d'index sur
+  `user_substances.substance_id` : le catalogue compte 6 lignes et n'est jamais supprimé.
+- **RLS** : `substances` → `select` des lignes actives pour `authenticated`. Autres tables →
+  `select`, `insert`, `update`, `delete` si `(select auth.uid()) = user_id` (using + with check).
+  `anon` : aucun privilège. `UPDATE` limité aux colonnes métier (jamais `id`, `created_at`).
+- **Garde-fou** : trigger `profiles_ensure_onboarding_requirements` (`BEFORE UPDATE OF
+  onboarding_completed`) : refuse le passage à `true` sans substance active (dont une
+  principale), raison et motivation (`onboarding_incomplete`).
+- **RPC** `complete_onboarding(payload jsonb) returns text` : voir ADR-028. Payload :
+
+```json
+{
+  "substances": [{ "slug": "cannabis", "goal": "abstinence", "customName": null }],
+  "primarySlug": "cannabis",
+  "startedOn": "2026-09-24",
+  "reason": "…",
+  "motivations": ["health", "freedom"],
+  "motivationOther": null,
+  "supportContact": { "name": "Julie", "relationship": "Amie", "phone": null, "email": null }
+}
+```
+
+Retour : `completed` ou `already_completed`. Erreurs : `invalid_substances`, `invalid_goal`,
+`invalid_primary`, `invalid_started_on`, `invalid_reason`, `invalid_motivations`,
+`invalid_support_contact`, `onboarding_incomplete`.
+
+- **Correction Sprint 1** : `authenticated` ne peut plus modifier `profiles.onboarding_completed`.
+- **Correctif** (`…100000`) : privilège `UPDATE (user_id)` sur `onboarding_drafts`, requis par
+  l'upsert de PostgREST (sans risque : la RLS impose `user_id = auth.uid()`).
+
+### Vérifier la sécurité de l'onboarding
+
+```bash
+npx supabase db query --linked -f supabase/tests/onboarding_rls.sql
+```
+
+Résultat attendu (affiché comme une erreur, voulu) :
+`RLS_OK — onboarding : 24 vérifications réussies`. Couvre : garde-fou, catalogue en lecture
+seule, `onboarding_completed` non modifiable, finalisation multi-substance, idempotence,
+isolation A/B sur les 4 tables, refus atomiques (sans substance, raison, motivation, date
+future, principale invalide), accès anonyme refusé.
+
 ## Grandes entités envisagées
 
 Conçues sprint par sprint (noms indicatifs, susceptibles d'évoluer) :
@@ -146,9 +206,11 @@ Conçues sprint par sprint (noms indicatifs, susceptibles d'évoluer) :
 | Entité | Sprint | Rôle |
 | --- | --- | --- |
 | `profiles` | 1 ✅ | Profil (nom d'affichage, fuseau horaire, onboarding) |
-| `substances` | 2 | Catalogue (par défaut + personnalisées) |
-| `user_substances` | 2 | Substances suivies, objectif (arrêter / réduire / observer), date de début |
-| `personal_reasons`, `personal_goals`, `support_contacts` | 2 / 8 | Pourquoi, motivations, soutien, plan |
+| `substances` | 2 ✅ | Catalogue global contrôlé (« Autre » précisé par l'utilisateur) |
+| `user_substances` | 2 ✅ | Substances suivies, objectif (arrêter / réduire / observer), date de début |
+| `personal_reasons`, `user_motivations`, `support_contacts` | 2 ✅ | Pourquoi, motivations, soutien |
+| `onboarding_drafts` | 2 ✅ | Brouillon du wizard (supprimé à la finalisation) |
+| `personal_goals` | 8 | Objectifs personnels (Mon plan) |
 | `daily_checkins` | 3 | Check-in global du jour (humeur, énergie, stress, envie, réflexions) |
 | `checkin_substance_statuses` | 3 | Statut du jour **par substance suivie** (voir ADR-007) |
 | `checkin_emotions`, `checkin_triggers`, `checkin_achievements` | 3 | Détails du check-in |

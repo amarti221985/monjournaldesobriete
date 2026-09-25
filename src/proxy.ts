@@ -1,13 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { resolveProxyRedirect } from "@/lib/auth/redirects";
+import { needsOnboardingState, resolveProxyRedirect } from "@/lib/auth/redirects";
 import { EnvValidationError } from "@/lib/env";
 import { redirectWithSession, updateSession } from "@/lib/supabase/proxy";
 
 /**
  * Proxy Next.js 16 (anciennement middleware) :
  * 1. rafraîchit la session Supabase à chaque navigation;
- * 2. redirige selon l'état d'authentification (première ligne de défense).
+ * 2. redirige selon l'authentification et l'onboarding (première ligne de défense) ;
+ *    l'état de l'onboarding n'est lu que pour les routes qui en dépendent.
  *
  * La protection réelle reste côté serveur : chaque layout / page / Server Action
  * de la zone (app) revérifie l'utilisateur (voir src/lib/auth/session.ts).
@@ -26,10 +27,17 @@ export async function proxy(request: NextRequest) {
     throw error;
   }
 
+  const { pathname, search } = request.nextUrl;
+  const onboardingCompleted =
+    session.isAuthenticated && needsOnboardingState(pathname)
+      ? await session.getOnboardingCompleted()
+      : undefined;
+
   const destination = resolveProxyRedirect({
-    pathname: request.nextUrl.pathname,
-    search: request.nextUrl.search,
+    pathname,
+    search,
     isAuthenticated: session.isAuthenticated,
+    onboardingCompleted,
   });
 
   return destination

@@ -33,9 +33,11 @@ Puis vérifier la sécurité de `profiles` :
 
 ```bash
 npx supabase db query --linked -f supabase/tests/profiles_rls.sql
+npx supabase db query --linked -f supabase/tests/onboarding_rls.sql
 ```
 
-Résultat attendu (affiché comme une erreur, c'est voulu) : `RLS_OK — profiles : 14 vérifications réussies`.
+Résultats attendus (affichés comme une erreur, c'est voulu) : `RLS_OK — profiles : 14 vérifications
+réussies` et `RLS_OK — onboarding : 24 vérifications réussies`.
 
 > Windows PowerShell : si `npx` est bloqué par la stratégie d'exécution des scripts,
 > utiliser `npx.cmd` et `npm.cmd`.
@@ -74,7 +76,7 @@ ou une substance (règle de confidentialité du projet).
 ```html
 <p>Bonjour,</p>
 <p>Confirme ton adresse courriel pour activer ton compte :</p>
-<p><a href="{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=email&next=/today">Confirmer mon adresse</a></p>
+<p><a href="{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=email&next=/onboarding">Confirmer mon adresse</a></p>
 <p>Si tu n'es pas à l'origine de cette demande, ignore ce message.</p>
 ```
 

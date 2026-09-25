@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 
-import { buildLoginUrl, getSafeRedirect, resolveProxyRedirect } from "@/lib/auth/redirects";
+import {
+  buildLoginUrl,
+  getAppAccessRedirect,
+  getAuthenticatedHomeRoute,
+  getOnboardingAccessRedirect,
+  getSafeRedirect,
+  needsOnboardingState,
+  resolvePostLoginRedirect,
+  resolveProxyRedirect,
+} from "@/lib/auth/redirects";
 
 describe("getSafeRedirect", () => {
   it.each([
@@ -8,6 +17,7 @@ describe("getSafeRedirect", () => {
     ["/today?tab=semaine", "/today?tab=semaine"],
     ["/today#section", "/today#section"],
     ["/reset-password", "/reset-password"],
+    ["/onboarding", "/onboarding"],
     ["/calendar/2026/09", "/calendar/2026/09"],
   ])("accepte le chemin interne autorisé %s", (input, expected) => {
     expect(getSafeRedirect(input)).toBe(expected);
@@ -91,5 +101,96 @@ describe("resolveProxyRedirect", () => {
     expect(
       resolveProxyRedirect({ pathname: "/reset-password", search: "", isAuthenticated: true }),
     ).toBeNull();
+  });
+});
+
+describe("routage selon l'onboarding (Sprint 2)", () => {
+  const incomplete = { onboarding_completed: false };
+  const complete = { onboarding_completed: true };
+
+  it("non authentifié : /onboarding → /login", () => {
+    expect(
+      resolveProxyRedirect({ pathname: "/onboarding", search: "", isAuthenticated: false }),
+    ).toBe("/login?next=%2Fonboarding");
+  });
+
+  it("authentifié + onboarding incomplet : /today → /onboarding", () => {
+    expect(getAppAccessRedirect(incomplete)).toBe("/onboarding");
+  });
+
+  it("authentifié + onboarding incomplet : /onboarding autorisé", () => {
+    expect(getOnboardingAccessRedirect(incomplete)).toBeNull();
+    expect(
+      resolveProxyRedirect({ pathname: "/onboarding", search: "", isAuthenticated: true }),
+    ).toBeNull();
+  });
+
+  it("authentifié + onboarding terminé : /onboarding → /today", () => {
+    expect(getOnboardingAccessRedirect(complete)).toBe("/today");
+  });
+
+  it("authentifié + onboarding terminé : /today autorisé", () => {
+    expect(getAppAccessRedirect(complete)).toBeNull();
+  });
+
+  it("profil introuvable : traité comme onboarding incomplet", () => {
+    expect(getAppAccessRedirect(null)).toBe("/onboarding");
+    expect(getOnboardingAccessRedirect(null)).toBeNull();
+  });
+
+  it("après connexion : onboarding si incomplet, même avec une destination demandée", () => {
+    expect(resolvePostLoginRedirect(incomplete, "/journal")).toBe("/onboarding");
+  });
+
+  it("après connexion : destination sûre ou /today si terminé", () => {
+    expect(resolvePostLoginRedirect(complete, "/journal")).toBe("/journal");
+    expect(resolvePostLoginRedirect(complete, "https://evil.com")).toBe("/today");
+    expect(resolvePostLoginRedirect(complete, undefined)).toBe("/today");
+  });
+
+  it("destination par défaut d'un utilisateur connecté", () => {
+    expect(getAuthenticatedHomeRoute(incomplete)).toBe("/onboarding");
+    expect(getAuthenticatedHomeRoute(complete)).toBe("/today");
+    expect(getAuthenticatedHomeRoute()).toBe("/today");
+  });
+});
+
+describe("proxy : routage selon l'onboarding", () => {
+  const request = (pathname: string, onboardingCompleted?: boolean) =>
+    resolveProxyRedirect({ pathname, search: "", isAuthenticated: true, onboardingCompleted });
+
+  it("onboarding incomplet : /today → /onboarding", () => {
+    expect(request("/today", false)).toBe("/onboarding");
+  });
+
+  it("onboarding incomplet : /onboarding autorisé", () => {
+    expect(request("/onboarding", false)).toBeNull();
+  });
+
+  it("onboarding terminé : /onboarding → /today", () => {
+    expect(request("/onboarding", true)).toBe("/today");
+  });
+
+  it("onboarding terminé : /today autorisé", () => {
+    expect(request("/today", true)).toBeNull();
+  });
+
+  it("connecté sur /login ou /signup : destination selon l'onboarding", () => {
+    expect(request("/login", false)).toBe("/onboarding");
+    expect(request("/signup", true)).toBe("/today");
+  });
+
+  it("état inconnu : aucune redirection d'onboarding (le layout décide)", () => {
+    expect(request("/today")).toBeNull();
+    expect(request("/onboarding")).toBeNull();
+  });
+
+  it("n'interroge la base que pour les routes protégées ou réservées aux visiteurs", () => {
+    expect(needsOnboardingState("/today")).toBe(true);
+    expect(needsOnboardingState("/onboarding")).toBe(true);
+    expect(needsOnboardingState("/login")).toBe(true);
+    expect(needsOnboardingState("/")).toBe(false);
+    expect(needsOnboardingState("/reset-password")).toBe(false);
+    expect(needsOnboardingState("/auth/callback")).toBe(false);
   });
 });

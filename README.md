@@ -6,7 +6,7 @@ Webapp de journal de sobriété : check-in quotidien, suivi des envies et décle
 réflexions, visualisation de la progression. Outil de journalisation et de suivi personnel —
 il ne remplace pas les conseils ou soins d'un professionnel de la santé.
 
-État : **Sprint 1 — authentification et profils** (voir [docs/PROJECT.md](docs/PROJECT.md)).
+État : **Sprint 2 — onboarding et configuration du parcours** (voir [docs/PROJECT.md](docs/PROJECT.md)).
 
 ## Stack
 
@@ -83,6 +83,13 @@ npm run db:types                        # régénérer les types
 
 Configuration du projet (URLs de redirection, confirmation du courriel, modèles de courriel,
 vérification RLS) : [docs/SUPABASE_SETUP.md](docs/SUPABASE_SETUP.md).
+
+Tests de sécurité SQL (transaction toujours annulée, aucune donnée conservée) :
+
+```bash
+npx supabase db query --linked -f supabase/tests/profiles_rls.sql
+npx supabase db query --linked -f supabase/tests/onboarding_rls.sql
+```
 Schéma et conventions : [docs/DATABASE.md](docs/DATABASE.md).
 
 ## Build

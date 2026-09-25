@@ -52,8 +52,8 @@ plusieurs substances (alcool, cannabis, nicotine, stimulants, opioïdes, autres)
 | --- | --- | --- |
 | 0 | Fondations techniques | ✅ Terminé |
 | 1 | Authentification et profils | ✅ Terminé |
-| 2 | Onboarding | À venir |
-| 3 | Check-in quotidien | |
+| 2 | Onboarding | ✅ Terminé |
+| 3 | Check-in quotidien | À venir |
 | 4 | Dashboard | |
 | 5 | Calendrier et journal | |
 | 6 | Progression et statistiques | |

@@ -1,16 +1,22 @@
+import { redirect } from "next/navigation";
+
 import { AppShell } from "@/components/layout/app-shell";
 import { UserMenu } from "@/features/auth/components/user-menu";
 import { TimezoneSync } from "@/features/profile/components/timezone-sync";
+import { getAppAccessRedirect } from "@/lib/auth/redirects";
 import { requireUser } from "@/lib/auth/session";
 import { getCurrentProfile } from "@/lib/services/profiles";
 
 /**
- * Zone authentifiée. La vérification est faite ici côté serveur, en plus du proxy
- * (défense en profondeur) : un visiteur non connecté est redirigé vers /login.
+ * Zone authentifiée. Vérifications côté serveur, en plus du proxy (défense en profondeur) :
+ * visiteur non connecté → /login ; onboarding non terminé → /onboarding (ADR-025).
  */
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const user = await requireUser();
   const profile = await getCurrentProfile();
+
+  const onboardingRedirect = getAppAccessRedirect(profile);
+  if (onboardingRedirect) redirect(onboardingRedirect);
 
   return (
     <AppShell

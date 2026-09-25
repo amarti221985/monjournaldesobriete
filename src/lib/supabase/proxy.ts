@@ -34,8 +34,23 @@ export async function updateSession(request: NextRequest) {
   });
 
   const { data } = await supabase.auth.getClaims();
+  const userId = data?.claims?.sub ?? null;
 
-  return { response, isAuthenticated: Boolean(data?.claims?.sub) };
+  return {
+    response,
+    isAuthenticated: Boolean(userId),
+    /** État de l'onboarding (`undefined` si indisponible : les layouts décideront). */
+    getOnboardingCompleted: async (): Promise<boolean | undefined> => {
+      if (!userId) return undefined;
+      const { data: profile, error } = await supabase
+        .from("profiles")
+        .select("onboarding_completed")
+        .eq("id", userId)
+        .maybeSingle();
+      if (error) return undefined;
+      return profile?.onboarding_completed ?? false;
+    },
+  };
 }
 
 /**

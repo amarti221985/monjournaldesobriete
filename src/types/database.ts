@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      onboarding_drafts: {
+        Row: {
+          current_step: number
+          data: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          current_step?: number
+          data?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          current_step?: number
+          data?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      personal_reasons: {
+        Row: {
+          created_at: string
+          id: string
+          reason_text: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          reason_text: string
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          reason_text?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -41,15 +86,162 @@ export type Database = {
         }
         Relationships: []
       }
+      substances: {
+        Row: {
+          category: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name_fr: string
+          slug: string
+          sort_order: number
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name_fr: string
+          slug: string
+          sort_order: number
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name_fr?: string
+          slug?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      support_contacts: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          name: string
+          phone: string | null
+          relationship: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          name: string
+          phone?: string | null
+          relationship?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string
+          phone?: string | null
+          relationship?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_motivations: {
+        Row: {
+          created_at: string
+          custom_label: string | null
+          id: string
+          motivation: Database["public"]["Enums"]["motivation"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          custom_label?: string | null
+          id?: string
+          motivation: Database["public"]["Enums"]["motivation"]
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          custom_label?: string | null
+          id?: string
+          motivation?: Database["public"]["Enums"]["motivation"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_substances: {
+        Row: {
+          created_at: string
+          custom_name: string | null
+          goal: Database["public"]["Enums"]["substance_goal"]
+          id: string
+          is_active: boolean
+          is_primary: boolean
+          started_on: string
+          substance_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          custom_name?: string | null
+          goal: Database["public"]["Enums"]["substance_goal"]
+          id?: string
+          is_active?: boolean
+          is_primary?: boolean
+          started_on: string
+          substance_id: string
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          custom_name?: string | null
+          goal?: Database["public"]["Enums"]["substance_goal"]
+          id?: string
+          is_active?: boolean
+          is_primary?: boolean
+          started_on?: string
+          substance_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_substances_substance_id_fkey"
+            columns: ["substance_id"]
+            isOneToOne: false
+            referencedRelation: "substances"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      complete_onboarding: { Args: { payload: Json }; Returns: string }
     }
     Enums: {
-      [_ in never]: never
+      motivation:
+        | "health"
+        | "energy"
+        | "sleep"
+        | "relationships"
+        | "family"
+        | "confidence"
+        | "finances"
+        | "career"
+        | "freedom"
+        | "clarity"
+        | "personal_project"
+        | "other"
+      substance_goal: "abstinence" | "reduction" | "observation"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -176,6 +368,22 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      motivation: [
+        "health",
+        "energy",
+        "sleep",
+        "relationships",
+        "family",
+        "confidence",
+        "finances",
+        "career",
+        "freedom",
+        "clarity",
+        "personal_project",
+        "other",
+      ],
+      substance_goal: ["abstinence", "reduction", "observation"],
+    },
   },
 } as const

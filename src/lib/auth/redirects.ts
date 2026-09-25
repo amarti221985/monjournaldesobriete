@@ -19,12 +19,32 @@ export function isPathWithin(pathname: string, prefix: string): boolean {
   return pathname === prefix || pathname.startsWith(`${prefix}/`);
 }
 
+/** État d'onboarding nécessaire aux décisions de routage (issu de `profiles`). */
+export type OnboardingState = { onboarding_completed: boolean } | null;
+
 /**
- * Destination par défaut d'un utilisateur connecté.
- * Sprint 2 : dépendra de `profiles.onboarding_completed` (/onboarding ou /today).
+ * Destination par défaut d'un utilisateur connecté (ADR-025) :
+ * `/onboarding` tant que l'onboarding n'est pas terminé, sinon `/today`.
+ * Sans profil fourni (ex. proxy), `/today` : son layout redirige si nécessaire.
  */
-export function getAuthenticatedHomeRoute(): string {
+export function getAuthenticatedHomeRoute(profile?: OnboardingState): string {
+  if (profile !== undefined && !profile?.onboarding_completed) return routes.onboarding;
   return routes.today;
+}
+
+/** Après connexion : onboarding si incomplet, sinon destination demandée (sûre) ou /today. */
+export function resolvePostLoginRedirect(profile: OnboardingState, next: unknown): string {
+  return profile?.onboarding_completed ? getSafeRedirect(next) : routes.onboarding;
+}
+
+/** Zone applicative : redirection vers l'onboarding s'il n'est pas terminé, sinon null. */
+export function getAppAccessRedirect(profile: OnboardingState): string | null {
+  return profile?.onboarding_completed ? null : routes.onboarding;
+}
+
+/** Page d'onboarding : un onboarding terminé ne peut pas être refait (évite d'écraser les données). */
+export function getOnboardingAccessRedirect(profile: OnboardingState): string | null {
+  return profile?.onboarding_completed ? routes.today : null;
 }
 
 /**
@@ -69,26 +89,43 @@ type ProxyRedirectInput = {
   pathname: string;
   search: string;
   isAuthenticated: boolean;
+  /** État de l'onboarding, lu par le proxy seulement si nécessaire (sinon `undefined`). */
+  onboardingCompleted?: boolean;
 };
 
+function isProtectedPath(pathname: string) {
+  return protectedRoutePrefixes.some((prefix) => isPathWithin(pathname, prefix));
+}
+
+function isGuestOnlyPath(pathname: string) {
+  return guestOnlyRoutes.some((route) => isPathWithin(pathname, route));
+}
+
+/** Vrai si le proxy doit connaître l'état de l'onboarding pour ce chemin. */
+export function needsOnboardingState(pathname: string): boolean {
+  return isProtectedPath(pathname) || isGuestOnlyPath(pathname);
+}
+
 /**
- * Redirection à appliquer par le proxy selon l'état d'authentification,
- * ou `null` si la requête peut continuer.
+ * Redirection à appliquer par le proxy selon l'authentification et l'onboarding,
+ * ou `null` si la requête peut continuer. Les layouts revérifient côté serveur.
  */
 export function resolveProxyRedirect({
   pathname,
   search,
   isAuthenticated,
+  onboardingCompleted,
 }: ProxyRedirectInput): string | null {
-  const isProtected = protectedRoutePrefixes.some((prefix) => isPathWithin(pathname, prefix));
-  if (!isAuthenticated && isProtected) {
-    return buildLoginUrl(`${pathname}${search}`);
+  if (!isAuthenticated) {
+    return isProtectedPath(pathname) ? buildLoginUrl(`${pathname}${search}`) : null;
   }
 
-  const isGuestOnly = guestOnlyRoutes.some((route) => isPathWithin(pathname, route));
-  if (isAuthenticated && isGuestOnly) {
-    return getAuthenticatedHomeRoute();
-  }
+  const onboardingState =
+    onboardingCompleted === undefined ? undefined : { onboarding_completed: onboardingCompleted };
 
+  if (isGuestOnlyPath(pathname)) return getAuthenticatedHomeRoute(onboardingState);
+  if (onboardingState === undefined) return null;
+  if (isPathWithin(pathname, routes.onboarding)) return getOnboardingAccessRedirect(onboardingState);
+  if (isProtectedPath(pathname)) return getAppAccessRedirect(onboardingState);
   return null;
 }

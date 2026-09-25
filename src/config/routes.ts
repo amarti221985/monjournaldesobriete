@@ -9,6 +9,8 @@ export const routes = {
   forgotPassword: "/forgot-password",
   resetPassword: "/reset-password",
   authCallback: "/auth/callback",
+  // Onboarding (Sprint 2)
+  onboarding: "/onboarding",
   // Application authentifiée
   today: "/today",
   // Sprints 3 à 8 — pas encore implémentées
@@ -23,6 +25,7 @@ export type AppRoute = (typeof routes)[keyof typeof routes];
 
 /** Zone authentifiée : accès réservé aux utilisateurs connectés. */
 export const protectedRoutePrefixes: readonly string[] = [
+  routes.onboarding,
   routes.today,
   routes.calendar,
   routes.journal,

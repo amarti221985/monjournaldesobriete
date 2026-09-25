@@ -29,6 +29,7 @@ src/
   app/                      Routes (App Router)
     (marketing)/            Pages publiques : accueil (puis confidentialité, conditions)
     (auth)/                 login, signup, forgot-password, reset-password (+ layout)
+    (onboarding)/           Wizard d'onboarding (layout sobre + onboarding/)
     (app)/                  Zone authentifiée : layout (AppShell) + today/
     auth/callback/route.ts  Callback Supabase Auth (confirmation, réinitialisation)
     layout.tsx              Layout racine : police, metadata, providers
@@ -40,6 +41,7 @@ src/
       schemas.ts            Schémas Zod partagés client / serveur
       errors.ts             Erreurs Supabase → messages humains (anti-énumération)
       components/           Formulaires, AuthCard, UserMenu, SignOutButton
+    onboarding/             Wizard : constantes, schémas, logique pure, actions, composants
     profile/
       actions.ts            Enregistrement du fuseau détecté
       components/           TimezoneSync
@@ -56,7 +58,8 @@ src/
     timezone.ts             Validation / détection des fuseaux IANA
     auth/redirects.ts       getSafeRedirect, resolveProxyRedirect (pur, testé)
     auth/session.ts         getCurrentUser, requireUser (server-only)
-    services/profiles.ts    getCurrentProfile, saveTimezoneIfMissing (server-only)
+    services/               profiles, substances, onboarding, journey (server-only)
+    dates.ts                Journées locales, date maximale, formatage
     supabase/               Clients navigateur / serveur / proxy
     utils.ts                cn()
   types/
@@ -79,6 +82,7 @@ fonctionnalité concernée, et une fonctionnalité par dossier dans `src/feature
 | --- | --- | --- |
 | `(marketing)` | Public. Accueil temporaire. | `SiteHeader` + `SiteFooter` |
 | `(auth)` | Connexion, inscription, mot de passe oublié, nouveau mot de passe. | Marque + carte centrée, retour à l'accueil |
+| `(onboarding)` | Configuration du parcours (`/onboarding`), obligatoire avant l'application. | Marque + menu du compte, sans navigation |
 | `(app)` | Application authentifiée (`/today`). | `AppShell` (sidebar desktop, barre inférieure mobile, menu utilisateur) |
 
 Un seul layout racine (`src/app/layout.tsx`). La navigation de l'app n'affiche en lien que les
@@ -160,6 +164,55 @@ mémorisé par requête. Pas de Context React global : les données serveur sont
 - Journalisation : codes d'erreur techniques uniquement (jamais courriel, mot de passe, jeton,
   cookie ni contenu du profil).
 
+## Onboarding (Sprint 2)
+
+### Routage (ADR-025, ADR-033)
+
+```text
+Non connecté ──► /login, /signup
+      │
+Connecté ──► onboarding terminé ?
+               ├─ non ─► /onboarding   (/today et toute la zone (app) y redirigent)
+               └─ oui ─► /today        (/onboarding y redirige ; /login et /signup aussi)
+```
+
+Appliqué par le proxy (HTTP 307, état lu seulement pour les routes concernées), puis revérifié
+par le layout `(app)` et la page `/onboarding`. Après connexion : `resolvePostLoginRedirect()`.
+
+### Wizard `/onboarding`
+
+- Route `src/app/(onboarding)/onboarding/page.tsx` (Server Component) : vérifie l'accès, charge
+  le catalogue, le brouillon et calcule la date maximale (fuseau du profil), puis rend
+  `OnboardingWizard` (Client Component, seul composant avec état).
+- 8 étapes + confirmation : Bienvenue · Ce que je veux changer · Mon objectif · Mon point de
+  départ · Pourquoi · Ce qui compte pour moi · Mon soutien (facultatif) · Résumé → « Ton parcours
+  est prêt ». « Étape N sur 8 » + barre de progression ; Retour / Continuer ; « Modifier »
+  depuis le résumé ramène au résumé ; « Enregistrer et quitter ».
+- Validation par étape (`validateStep`, schémas Zod de `src/features/onboarding/schemas.ts`),
+  revalidée par la Server Action puis par la RPC.
+- Brouillon côté serveur (`onboarding_drafts`) à chaque étape (ADR-031).
+- Finalisation : `completeOnboardingAction` → RPC `complete_onboarding` (ADR-028). Erreur :
+  réponses conservées + « Réessayer ». Bouton désactivé pendant l'envoi ; RPC idempotente.
+- Accessibilité : cartes sélectionnables basées sur de vrais `checkbox` / `radio`
+  (`SelectableOption`, coche visible en plus de la couleur), `fieldset` / `legend`, erreurs
+  reliées (`aria-describedby`), focus déplacé sur le titre à chaque étape et sur le premier champ
+  en erreur.
+
+### Fichiers
+
+```text
+src/app/(onboarding)/layout.tsx, onboarding/page.tsx
+src/features/onboarding/
+  constants.ts        valeurs métier ↔ libellés, étapes, mention de sevrage
+  schemas.ts          Zod : sélection, objectifs, date, raison, motivations, contact, finalisation, brouillon
+  logic.ts            resolvePrimarySlug, buildCompletionPayload, validateStep (pur, testé)
+  actions.ts          saveOnboardingDraftAction, completeOnboardingAction
+  components/         OnboardingWizard, étapes, progression, confirmation
+src/lib/services/     substances.ts, onboarding.ts, journey.ts
+src/lib/dates.ts      journée locale, date max, formatage (pur, testé)
+src/components/forms/selectable-option.tsx
+```
+
 ## Conventions de composants
 
 - Fichiers en `kebab-case.tsx`, composants en `PascalCase`, exports nommés (sauf fichiers
@@ -208,6 +261,9 @@ mémorisé par requête. Pas de Context React global : les données serveur sont
 - Vitest (`npm test`), fichiers `*.test.ts` colocalisés avec le code testé.
 - Sprint 0 : validation des variables d'environnement.
 - Sprint 1 : redirections sûres, accès proxy, schémas d'authentification, messages d'erreur, fuseaux.
-- SQL : `supabase/tests/profiles_rls.sql` (RLS et triggers de `profiles`, voir DATABASE.md).
+- Sprint 2 : schémas et logique de l'onboarding (objectifs, date future, raison, motivations,
+  contact, substance principale, finalisation), routage selon l'onboarding, dates locales.
+- SQL : `supabase/tests/profiles_rls.sql` et `supabase/tests/onboarding_rls.sql` (RLS, triggers,
+  RPC ; voir DATABASE.md).
 - Priorité future : séries, statistiques, dates locales/fuseaux, validation, RLS.
 - Playwright (tests de parcours) sera ajouté quand les premiers parcours existeront.

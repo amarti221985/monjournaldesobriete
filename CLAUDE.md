@@ -18,6 +18,10 @@ Règles essentielles :
 - Jamais de `user_id` fourni par le client ; identité issue de la session côté serveur
   (`requireUser()` / `getCurrentUser()` dans chaque page, layout et Server Action protégés).
 - Code par fonctionnalité dans `src/features/<domaine>/` (actions, schémas, composants).
+- Onboarding obligatoire : routage via `src/lib/auth/redirects.ts` (proxy + layouts) ;
+  `onboarding_completed` ne change que par la RPC `complete_onboarding` (ADR-028).
+- Dates métier (`started_on`, futurs `local_date`) : type `date`, helpers de `src/lib/dates.ts`.
+- Nouvelle table utilisateur : ajouter un test dans `supabase/tests/` (bloc atomique `RLS_OK`).
 - Chemins via `src/config/routes.ts` ; redirections via `getSafeRedirect()`.
 - Ne jamais journaliser courriel, mot de passe, jeton, cookie ni contenu personnel.
 - Journée locale (`date`) séparée des timestamps UTC (ADR-006).

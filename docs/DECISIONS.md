@@ -13,7 +13,7 @@ acceptée : on en ajoute une nouvelle qui la remplace (statut « Remplacée par 
 | 005 | Progression globale plutôt que série seule | Acceptée |
 | 006 | Dates locales séparées des timestamps UTC | Acceptée |
 | 007 | Check-in global + statut par substance | Acceptée (détails au Sprint 3) |
-| 008 | Règle de la série et objectifs « réduire » / « observer » | Proposée — à confirmer au Sprint 3 |
+| 008 | Règle de la série et objectifs « réduire » / « observer » | Acceptée (Sprint 2) |
 | 009 | Hébergement Hostinger Business (Node.js) et Node 24 LTS | Acceptée |
 | 010 | Supabase cloud sans dépendance à Docker | Acceptée |
 | 011 | npm comme gestionnaire de paquets | Acceptée |
@@ -30,6 +30,15 @@ acceptée : on en ajoute une nouvelle qui la remplace (statut « Remplacée par 
 | 022 | Code organisé par fonctionnalité (`src/features/`) | Acceptée |
 | 023 | Anti-abus et courriels : protections Supabase d’abord | Acceptée |
 | 024 | Liens de courriel : PKCE par défaut, `token_hash` recommandé | Acceptée |
+| 025 | Onboarding obligatoire avant l'accès à l'application | Acceptée |
+| 026 | Architecture multi-substance | Acceptée |
+| 027 | Date de début : journée locale, jamais une preuve de sobriété | Acceptée |
+| 028 | Finalisation atomique de l'onboarding | Acceptée |
+| 029 | Catalogue de substances contrôlé | Acceptée |
+| 030 | Une seule substance principale | Acceptée |
+| 031 | Brouillon de l'onboarding côté serveur | Acceptée |
+| 032 | Objectifs et motivations : enums PostgreSQL | Acceptée |
+| 033 | État de l'onboarding vérifié dans le proxy | Acceptée |
 
 ---
 
@@ -119,20 +128,22 @@ acceptée : on en ajoute une nouvelle qui la remplace (statut « Remplacée par 
 
 ## ADR-008 — Règle de la série et objectifs « réduire » / « observer »
 
-- **Statut** : proposée, à confirmer par le porteur du projet avant le Sprint 3.
+- **Statut** : acceptée au Sprint 2 (implémentation du calcul : Sprints 3-4).
 - **Context** : il faut définir l'effet d'une journée sans check-in et le sens d'une série
   lorsque l'objectif n'est pas l'arrêt.
-- **Decision proposée** :
-  - Série actuelle (substance à objectif « arrêter ») = jours depuis la dernière consommation
-    enregistrée (ou depuis la date de début).
-  - Une journée **sans check-in** ne casse pas la série (on ne suppose jamais une consommation),
-    mais ne compte **pas** dans les journées sobres cumulatives, qui ne comptent que des jours
-    confirmés. Elle apparaît comme « non renseignée » et peut être complétée après coup.
+- **Decision** :
+  - Une journée **sans check-in ne casse pas automatiquement** la série, mais **ne compte jamais
+    comme journée sobre** : les journées sobres cumulatives ne comptent que des journées
+    confirmées. Elle apparaît comme « non renseignée » et peut être complétée après coup.
+  - Une journée **explicitement enregistrée comme consommation** interrompt la série actuelle
+    de la substance concernée (sans jamais effacer le cumul, la meilleure série ni l'historique).
+  - La date de début déclarée ne crée aucune journée sobre (ADR-027).
   - Objectif « réduire » : pas de série de sobriété ; on met en avant les jours avec
     consommation, les quantités et leur évolution (limite personnelle possible plus tard).
   - Objectif « observer » : suivi uniquement, ni série ni objectif affiché.
 - **Reason** : cohérent avec « Progression > perfection » et honnête sur les données réelles.
 - **Consequences** : distinguer « sobre confirmé » et « non renseigné » dans tous les calculs.
+  Le moteur de série n'est pas encore codé.
 
 ## ADR-009 — Hébergement Hostinger Business (Node.js) et Node 24 LTS
 
@@ -307,3 +318,99 @@ acceptée : on en ajoute une nouvelle qui la remplace (statut « Remplacée par 
   (docs/SUPABASE_SETUP.md).
 - **Consequences** : l'application fonctionne avec les modèles par défaut ; la personnalisation
   des modèles rend les liens utilisables sur un autre appareil.
+
+## ADR-025 — Onboarding obligatoire avant l'accès à l'application
+
+- **Context** : les écrans à venir (check-in, statistiques) dépendent des substances suivies et
+  de leurs objectifs.
+- **Decision** : tant que `profiles.onboarding_completed = false`, toute route de la zone `(app)`
+  redirige vers `/onboarding` ; une fois terminé, `/onboarding` redirige vers `/today` (pas de
+  réécriture accidentelle des données). Après connexion : `/onboarding` si incomplet, sinon la
+  destination demandée (sûre) ou `/today`. Règles pures dans `src/lib/auth/redirects.ts`
+  (`resolveProxyRedirect`, `resolvePostLoginRedirect`, `getAppAccessRedirect`,
+  `getOnboardingAccessRedirect`), testées.
+- **Consequences** : la vérification est faite dans le proxy (voir ADR-033) **et** dans les
+  layouts / pages (défense en profondeur). Une future modification du parcours passera par des
+  écrans de paramètres dédiés, jamais par le wizard.
+
+## ADR-026 — Architecture multi-substance
+
+- **Decision** : `user_substances` relie un utilisateur à chaque catégorie suivie, avec son
+  **propre objectif** (`goal`), sa **propre date** (`started_on`), `is_primary` et `is_active`.
+  « Autre » stocke une précision personnelle (`custom_name`) sans jamais créer d'entrée dans le
+  catalogue global. Une seule relation active par substance (index unique partiel).
+- **Reason** : ex. cannabis → arrêter, nicotine → réduire, alcool → observer.
+- **Consequences** : l'onboarding demande une date générale appliquée à chaque substance ; le
+  modèle permet déjà des dates individuelles. `is_active` permet d'arrêter un suivi sans perdre
+  l'historique.
+
+## ADR-027 — Date de début : journée locale, jamais une preuve de sobriété
+
+- **Decision** : `started_on` est un `date` PostgreSQL (journée locale déclarée), jamais un
+  `timestamptz` ni converti en UTC. Pas de date future : la limite est « aujourd'hui » dans le
+  fuseau du profil (ou le fuseau le plus en avance, `Pacific/Kiritimati`, si le fuseau est
+  inconnu), identique côté Zod et dans la RPC.
+- **Consequences** : la date de début ne génère **aucune** journée sobre. Seules les journées
+  réellement enregistrées (check-ins, Sprint 3) alimenteront les statistiques.
+
+## ADR-028 — Finalisation atomique de l'onboarding
+
+- **Context** : éviter `onboarding_completed = true` sans données, les doubles soumissions et
+  les enregistrements partiels.
+- **Decision** :
+  - RPC `public.complete_onboarding(payload jsonb)` : une transaction, verrou `FOR UPDATE` sur le
+    profil, revalidation complète des entrées, insertion de toutes les données, passage à
+    `onboarding_completed = true`, suppression du brouillon. Idempotente (`already_completed`).
+    `SECURITY DEFINER` + `search_path` vide ; identité issue uniquement de `auth.uid()`.
+  - Garde-fou en base : trigger `profiles_ensure_onboarding_requirements` qui refuse le passage à
+    `true` sans substance active (dont une principale), raison et motivation — quel que soit le
+    chemin d'écriture.
+  - **Correction du Sprint 1** : `onboarding_completed` n'est plus modifiable directement par
+    `authenticated` (privilège de colonne retiré) ; seule la RPC peut le modifier.
+- **Consequences** : en cas d'erreur, rien n'est enregistré et le wizard conserve les réponses.
+  Le conseiller Supabase signale la RPC `SECURITY DEFINER` exécutable : comportement voulu.
+
+## ADR-029 — Catalogue de substances contrôlé
+
+- **Decision** : table globale `substances` (slug stable, `name_fr`, `category`, `is_active`,
+  `sort_order`), alimentée par migration : alcool, cannabis, nicotine, stimulants, opioïdes,
+  autre. Lecture seule pour `authenticated` (lignes actives), aucun accès anonyme, aucune
+  écriture utilisateur.
+- **Consequences** : pas de liste détaillée de drogues ; aucune icône associée aux substances
+  (éviter la stigmatisation). Ajouter une catégorie = nouvelle migration.
+
+## ADR-030 — Une seule substance principale
+
+- **Decision** : index unique partiel `user_substances (user_id) WHERE is_primary AND is_active`,
+  plus la contrainte `not is_primary or is_active`. Côté application, `resolvePrimarySlug()`
+  choisit la seule substance, le choix de l'utilisateur ou la première sélectionnée.
+- **Consequences** : notion discrète dans l'interface, utilisée pour personnaliser certains écrans.
+
+## ADR-031 — Brouillon de l'onboarding côté serveur
+
+- **Context** : l'utilisateur peut fermer l'onglet ou rafraîchir ; la raison personnelle et les
+  coordonnées d'un contact sont sensibles.
+- **Decision** : table `onboarding_drafts` (une ligne par utilisateur, `data jsonb` borné à
+  16 Ko, RLS), sauvegardée à chaque « Continuer » et par « Enregistrer et quitter » ; reprise à
+  l'étape enregistrée ; supprimée par la finalisation. **Rien n'est stocké dans le navigateur.**
+- **Consequences** : reprise possible sur un autre appareil. Si la sauvegarde échoue (réseau),
+  le wizard continue et l'indique discrètement ; les réponses restent dans la page.
+
+## ADR-032 — Objectifs et motivations : enums PostgreSQL
+
+- **Decision** : `substance_goal` (`abstinence`, `reduction`, `observation`) et `motivation`
+  (`health`, `energy`, `sleep`, `relationships`, `family`, `confidence`, `finances`, `career`,
+  `freedom`, `clarity`, `personal_project`, `other`) ; libellés français dans
+  `src/features/onboarding/constants.ts`. `user_motivations` : une ligne par motivation,
+  `custom_label` réservé à `other`.
+- **Reason** : valeurs stables, typées jusque dans `src/types/database.ts`, interrogeables.
+
+## ADR-033 — État de l'onboarding vérifié dans le proxy
+
+- **Context** : un `redirect()` dans un layout survient après le début du streaming
+  (`loading.tsx`) : Next.js le transforme en redirection côté client (HTTP 200 + affichage bref).
+- **Decision** : pour les routes protégées et `/login`, `/signup`, le proxy lit
+  `profiles.onboarding_completed` (une requête légère, uniquement si nécessaire) et redirige en
+  HTTP 307. Les layouts gardent leur vérification.
+- **Consequences** : une requête supplémentaire par navigation protégée. En cas d'erreur de
+  lecture, le proxy laisse passer et le layout décide.

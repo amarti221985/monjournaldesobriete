@@ -11,7 +11,7 @@ import {
   resetPasswordSchema,
   signupSchema,
 } from "@/features/auth/schemas";
-import { getAuthenticatedHomeRoute, getSafeRedirect } from "@/lib/auth/redirects";
+import { getAuthenticatedHomeRoute, resolvePostLoginRedirect } from "@/lib/auth/redirects";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getSiteUrl } from "@/lib/env";
 import { getFieldErrors, readFormFields, type FormState } from "@/lib/forms";
@@ -67,7 +67,8 @@ export async function signUpAction(_previous: SignupState, formData: FormData): 
     email,
     password,
     options: {
-      emailRedirectTo: buildAuthCallbackUrl(getAuthenticatedHomeRoute()),
+      // Nouveau compte : l'onboarding est la première étape.
+      emailRedirectTo: buildAuthCallbackUrl(routes.onboarding),
       // Lues et revalidées par le trigger public.handle_new_user().
       data: { display_name: displayName, ...(timezone ? { timezone } : {}) },
     },
@@ -78,8 +79,9 @@ export async function signUpAction(_previous: SignupState, formData: FormData): 
     return { status: "error", message: getAuthErrorMessage(error.code, "signup"), values };
   }
 
-  // Confirmation du courriel désactivée : la session existe déjà.
-  if (data.session) redirect(getAuthenticatedHomeRoute());
+  // Confirmation du courriel désactivée : la session existe déjà ; un nouveau
+  // compte n'a pas encore fait son onboarding.
+  if (data.session) redirect(getAuthenticatedHomeRoute({ onboarding_completed: false }));
 
   // Confirmation activée (ou compte déjà existant : Supabase répond de la même façon,
   // ce qui évite de révéler l'existence du compte).
@@ -96,7 +98,7 @@ export async function signInAction(_previous: LoginState, formData: FormData): P
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword({
+  const { data, error } = await supabase.auth.signInWithPassword({
     email: parsed.data.email,
     password: parsed.data.password,
   });
@@ -106,7 +108,14 @@ export async function signInAction(_previous: LoginState, formData: FormData): P
     return { status: "error", message: getAuthErrorMessage(error.code, "login"), values };
   }
 
-  redirect(getSafeRedirect(parsed.data.next));
+  // Même client : la requête utilise la session qui vient d'être ouverte (RLS).
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("onboarding_completed")
+    .eq("id", data.user.id)
+    .maybeSingle();
+
+  redirect(resolvePostLoginRedirect(profile, parsed.data.next));
 }
 
 const FORGOT_PASSWORD_CONFIRMATION =
