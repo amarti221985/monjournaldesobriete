@@ -13,6 +13,9 @@ export const routes = {
   onboarding: "/onboarding",
   // Application authentifiée
   today: "/today",
+  // Check-in quotidien (Sprint 3) : sous /today, donc protégé par le même préfixe.
+  checkin: "/today/checkin",
+  checkinEntry: "/today/entry",
   // Sprints 3 à 8 — pas encore implémentées
   calendar: "/calendar",
   journal: "/journal",

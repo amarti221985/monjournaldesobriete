@@ -30,7 +30,7 @@ export function NavLink({ item, icon, variant }: NavLinkProps) {
     const className = cn(
       "flex min-h-14 flex-1 flex-col items-center justify-center gap-1 rounded-lg px-1 text-[0.7rem] font-medium transition-colors",
       !item.available && "text-muted-foreground/60",
-      item.available && (isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"),
+      item.available && (isActive ? "font-semibold text-primary" : "text-muted-foreground hover:text-foreground"),
     );
     const content = (
       <>
@@ -49,7 +49,9 @@ export function NavLink({ item, icon, variant }: NavLinkProps) {
     }
 
     return (
-      <Link href={item.href} aria-current={isActive ? "page" : undefined} className={className}>
+      <Link href={item.href} aria-current={isActive ? "page" : undefined} className={cn(className, "relative")}>
+        {/* Indicateur actif visible sans la couleur : barre au-dessus de l'icône */}
+        {isActive ? <span aria-hidden="true" className="absolute top-0 h-1 w-8 rounded-b-full bg-primary" /> : null}
         {content}
       </Link>
     );
@@ -60,7 +62,7 @@ export function NavLink({ item, icon, variant }: NavLinkProps) {
     !item.available && "text-muted-foreground/60",
     item.available &&
       (isActive
-        ? "bg-sidebar-accent text-sidebar-accent-foreground"
+        ? "bg-sidebar-accent font-semibold text-sidebar-accent-foreground shadow-[inset_3px_0_0_var(--primary)]"
         : "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"),
   );
 

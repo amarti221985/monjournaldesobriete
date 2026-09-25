@@ -6,12 +6,12 @@ Webapp de journal de sobriété : check-in quotidien, suivi des envies et décle
 réflexions, visualisation de la progression. Outil de journalisation et de suivi personnel —
 il ne remplace pas les conseils ou soins d'un professionnel de la santé.
 
-État : **Sprint 2 — onboarding et configuration du parcours** (voir [docs/PROJECT.md](docs/PROJECT.md)).
+État : **Sprint 6 — progression et analyses** (voir [docs/PROJECT.md](docs/PROJECT.md)).
 
 ## Stack
 
 Next.js 16 (App Router) · React 19 · TypeScript strict · Tailwind CSS 4 · shadcn/ui (Radix) ·
-Lucide · Zod · Supabase (Auth + PostgreSQL + RLS) · Vitest.
+Lucide · Zod · Recharts · Supabase (Auth + PostgreSQL + RLS) · Vitest.
 
 ## Prérequis
 
@@ -89,6 +89,8 @@ Tests de sécurité SQL (transaction toujours annulée, aucune donnée conservé
 ```bash
 npx supabase db query --linked -f supabase/tests/profiles_rls.sql
 npx supabase db query --linked -f supabase/tests/onboarding_rls.sql
+npx supabase db query --linked -f supabase/tests/checkins_rls.sql
+npx supabase db query --linked -f supabase/tests/journal_rls.sql
 ```
 Schéma et conventions : [docs/DATABASE.md](docs/DATABASE.md).
 

@@ -34,10 +34,13 @@ Puis vérifier la sécurité de `profiles` :
 ```bash
 npx supabase db query --linked -f supabase/tests/profiles_rls.sql
 npx supabase db query --linked -f supabase/tests/onboarding_rls.sql
+npx supabase db query --linked -f supabase/tests/checkins_rls.sql
+npx supabase db query --linked -f supabase/tests/journal_rls.sql
 ```
 
 Résultats attendus (affichés comme une erreur, c'est voulu) : `RLS_OK — profiles : 14 vérifications
-réussies` et `RLS_OK — onboarding : 24 vérifications réussies`.
+réussies`, `RLS_OK — onboarding : 24 vérifications réussies` et `RLS_OK — checkins : 26
+vérifications réussies`.
 
 > Windows PowerShell : si `npx` est bloqué par la stratégie d'exécution des scripts,
 > utiliser `npx.cmd` et `npm.cmd`.

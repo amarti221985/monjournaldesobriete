@@ -10,6 +10,8 @@ type StatusMessageProps = {
   /** Actions (boutons, liens) affichées sous le message. */
   children?: ReactNode;
   className?: string;
+  /** Niveau du titre : h1 pour une page d'état, h2/h3 à l'intérieur d'une page. */
+  headingLevel?: "h1" | "h2" | "h3";
 };
 
 /**
@@ -21,7 +23,9 @@ export function StatusMessage({
   description,
   children,
   className,
+  headingLevel = "h1",
 }: StatusMessageProps) {
+  const Heading = headingLevel;
   return (
     <div
       className={cn(
@@ -35,7 +39,7 @@ export function StatusMessage({
       >
         <Icon className="size-6" />
       </span>
-      <h1 className="text-xl font-semibold tracking-tight text-balance">{title}</h1>
+      <Heading className="text-xl font-semibold tracking-tight text-balance">{title}</Heading>
       {description ? (
         <p className="text-pretty text-muted-foreground">{description}</p>
       ) : null}

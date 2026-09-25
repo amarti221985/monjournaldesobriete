@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import {
   formatLongDate,
+  formatWeekdayDate,
   getLatestAllowedLocalDate,
+  getUserToday,
   getLocalDateString,
   isAfterDate,
   isValidDateString,
@@ -61,5 +63,36 @@ describe("formatLongDate", () => {
   it("formate en français sans décalage de fuseau", () => {
     expect(formatLongDate("2026-09-24")).toBe("24 septembre 2026");
     expect(formatLongDate("2027-01-01")).toBe("1 janvier 2027");
+  });
+});
+
+describe("getUserToday", () => {
+  it("UTC 01:30 à Toronto : la journée locale est encore la veille", () => {
+    const utcOneThirty = new Date("2026-09-25T01:30:00Z");
+    expect(utcOneThirty.toISOString().slice(0, 10)).toBe("2026-09-25");
+    expect(getUserToday("America/Toronto", utcOneThirty)).toBe("2026-09-24");
+  });
+
+  it("même instant : Vancouver et Paris donnent des journées différentes", () => {
+    const instant = new Date("2026-09-25T06:30:00Z");
+    expect(getUserToday("America/Vancouver", instant)).toBe("2026-09-24");
+    expect(getUserToday("Europe/Paris", instant)).toBe("2026-09-25");
+  });
+
+  it("utilise le fuseau par défaut si le profil n'en a pas", () => {
+    expect(getUserToday(null, new Date("2026-09-25T01:30:00Z"))).toBe("2026-09-24");
+    expect(getUserToday("UTC-4", new Date("2026-09-25T01:30:00Z"))).toBe("2026-09-24");
+  });
+
+  it("gère le passage à l'heure normale (novembre)", () => {
+    // 1er novembre 2026 : passage à l'heure normale à Toronto.
+    expect(getUserToday("America/Toronto", new Date("2026-11-02T04:30:00Z"))).toBe("2026-11-01");
+    expect(getUserToday("America/Toronto", new Date("2026-11-02T05:30:00Z"))).toBe("2026-11-02");
+  });
+});
+
+describe("formatWeekdayDate", () => {
+  it("formate une journée locale avec le jour de la semaine", () => {
+    expect(formatWeekdayDate("2026-09-24")).toBe("jeudi 24 septembre 2026");
   });
 });

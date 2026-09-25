@@ -53,11 +53,11 @@ plusieurs substances (alcool, cannabis, nicotine, stimulants, opioïdes, autres)
 | 0 | Fondations techniques | ✅ Terminé |
 | 1 | Authentification et profils | ✅ Terminé |
 | 2 | Onboarding | ✅ Terminé |
-| 3 | Check-in quotidien | À venir |
-| 4 | Dashboard | |
-| 5 | Calendrier et journal | |
-| 6 | Progression et statistiques | |
-| 7 | Mode envie de consommer | |
+| 3 | Check-in quotidien | ✅ Terminé |
+| 4 | Dashboard | ✅ Terminé |
+| 5 | Calendrier et journal | ✅ Terminé |
+| 6 | Progression et statistiques | ✅ Terminé |
+| 7 | Mode envie de consommer | À venir |
 | 8 | Mon plan | |
 | 9 | Accomplissements | |
 | 10 | PWA et notifications | |

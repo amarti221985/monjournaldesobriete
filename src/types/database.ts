@@ -14,6 +14,297 @@ export type Database = {
   }
   public: {
     Tables: {
+      achievement_types: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name_fr: string
+          slug: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name_fr: string
+          slug: string
+          sort_order: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name_fr?: string
+          slug?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      checkin_achievements: {
+        Row: {
+          achievement_type_id: string
+          checkin_id: string
+          created_at: string
+          custom_label: string | null
+          user_id: string
+        }
+        Insert: {
+          achievement_type_id: string
+          checkin_id: string
+          created_at?: string
+          custom_label?: string | null
+          user_id?: string
+        }
+        Update: {
+          achievement_type_id?: string
+          checkin_id?: string
+          created_at?: string
+          custom_label?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checkin_achievements_achievement_type_id_fkey"
+            columns: ["achievement_type_id"]
+            isOneToOne: false
+            referencedRelation: "achievement_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checkin_achievements_checkin_id_user_id_fkey"
+            columns: ["checkin_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "daily_checkins"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
+      checkin_emotions: {
+        Row: {
+          checkin_id: string
+          created_at: string
+          emotion_id: string
+          user_id: string
+        }
+        Insert: {
+          checkin_id: string
+          created_at?: string
+          emotion_id: string
+          user_id?: string
+        }
+        Update: {
+          checkin_id?: string
+          created_at?: string
+          emotion_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checkin_emotions_checkin_id_user_id_fkey"
+            columns: ["checkin_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "daily_checkins"
+            referencedColumns: ["id", "user_id"]
+          },
+          {
+            foreignKeyName: "checkin_emotions_emotion_id_fkey"
+            columns: ["emotion_id"]
+            isOneToOne: false
+            referencedRelation: "emotions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      checkin_triggers: {
+        Row: {
+          checkin_id: string
+          created_at: string
+          custom_label: string | null
+          trigger_type_id: string
+          user_id: string
+        }
+        Insert: {
+          checkin_id: string
+          created_at?: string
+          custom_label?: string | null
+          trigger_type_id: string
+          user_id?: string
+        }
+        Update: {
+          checkin_id?: string
+          created_at?: string
+          custom_label?: string | null
+          trigger_type_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checkin_triggers_checkin_id_user_id_fkey"
+            columns: ["checkin_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "daily_checkins"
+            referencedColumns: ["id", "user_id"]
+          },
+          {
+            foreignKeyName: "checkin_triggers_trigger_type_id_fkey"
+            columns: ["trigger_type_id"]
+            isOneToOne: false
+            referencedRelation: "trigger_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      consumption_events: {
+        Row: {
+          checkin_id: string
+          context_text: string | null
+          craving_before: number | null
+          created_at: string
+          id: string
+          next_time_strategy_text: string | null
+          occurred_at: string | null
+          quantity: number | null
+          reflection_text: string | null
+          unit: string | null
+          updated_at: string
+          user_id: string
+          user_substance_id: string
+        }
+        Insert: {
+          checkin_id: string
+          context_text?: string | null
+          craving_before?: number | null
+          created_at?: string
+          id?: string
+          next_time_strategy_text?: string | null
+          occurred_at?: string | null
+          quantity?: number | null
+          reflection_text?: string | null
+          unit?: string | null
+          updated_at?: string
+          user_id?: string
+          user_substance_id: string
+        }
+        Update: {
+          checkin_id?: string
+          context_text?: string | null
+          craving_before?: number | null
+          created_at?: string
+          id?: string
+          next_time_strategy_text?: string | null
+          occurred_at?: string | null
+          quantity?: number | null
+          reflection_text?: string | null
+          unit?: string | null
+          updated_at?: string
+          user_id?: string
+          user_substance_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consumption_events_checkin_id_user_id_fkey"
+            columns: ["checkin_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "daily_checkins"
+            referencedColumns: ["id", "user_id"]
+          },
+          {
+            foreignKeyName: "consumption_events_user_substance_id_user_id_fkey"
+            columns: ["user_substance_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "user_substances"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
+      daily_checkins: {
+        Row: {
+          checkin_date: string
+          completed_at: string | null
+          craving_score: number | null
+          created_at: string
+          energy_score: number | null
+          id: string
+          lesson_text: string | null
+          mood_score: number | null
+          notes: string | null
+          proud_of_text: string | null
+          status: Database["public"]["Enums"]["checkin_status"]
+          stress_score: number | null
+          tomorrow_intention_text: string | null
+          updated_at: string
+          user_id: string
+          victory_text: string | null
+        }
+        Insert: {
+          checkin_date: string
+          completed_at?: string | null
+          craving_score?: number | null
+          created_at?: string
+          energy_score?: number | null
+          id?: string
+          lesson_text?: string | null
+          mood_score?: number | null
+          notes?: string | null
+          proud_of_text?: string | null
+          status: Database["public"]["Enums"]["checkin_status"]
+          stress_score?: number | null
+          tomorrow_intention_text?: string | null
+          updated_at?: string
+          user_id?: string
+          victory_text?: string | null
+        }
+        Update: {
+          checkin_date?: string
+          completed_at?: string | null
+          craving_score?: number | null
+          created_at?: string
+          energy_score?: number | null
+          id?: string
+          lesson_text?: string | null
+          mood_score?: number | null
+          notes?: string | null
+          proud_of_text?: string | null
+          status?: Database["public"]["Enums"]["checkin_status"]
+          stress_score?: number | null
+          tomorrow_intention_text?: string | null
+          updated_at?: string
+          user_id?: string
+          victory_text?: string | null
+        }
+        Relationships: []
+      }
+      emotions: {
+        Row: {
+          category: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name_fr: string
+          slug: string
+          sort_order: number
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name_fr: string
+          slug: string
+          sort_order: number
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name_fr?: string
+          slug?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
       onboarding_drafts: {
         Row: {
           current_step: number
@@ -149,6 +440,33 @@ export type Database = {
         }
         Relationships: []
       }
+      trigger_types: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name_fr: string
+          slug: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name_fr: string
+          slug: string
+          sort_order: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name_fr?: string
+          slug?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
       user_motivations: {
         Row: {
           created_at: string
@@ -226,8 +544,46 @@ export type Database = {
     }
     Functions: {
       complete_onboarding: { Args: { payload: Json }; Returns: string }
+      save_checkin: {
+        Args: { finalize?: boolean; payload: Json }
+        Returns: Json
+      }
+      search_journal: {
+        Args: {
+          p_before?: string
+          p_from?: string
+          p_limit?: number
+          p_query?: string
+          p_status?: Database["public"]["Enums"]["checkin_status"]
+        }
+        Returns: {
+          checkin_date: string
+          completed_at: string | null
+          craving_score: number | null
+          created_at: string
+          energy_score: number | null
+          id: string
+          lesson_text: string | null
+          mood_score: number | null
+          notes: string | null
+          proud_of_text: string | null
+          status: Database["public"]["Enums"]["checkin_status"]
+          stress_score: number | null
+          tomorrow_intention_text: string | null
+          updated_at: string
+          user_id: string
+          victory_text: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "daily_checkins"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
     }
     Enums: {
+      checkin_status: "sober" | "sober_with_craving" | "consumed"
       motivation:
         | "health"
         | "energy"
@@ -369,6 +725,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      checkin_status: ["sober", "sober_with_craving", "consumed"],
       motivation: [
         "health",
         "energy",

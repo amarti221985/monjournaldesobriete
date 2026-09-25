@@ -22,6 +22,19 @@ Règles essentielles :
   `onboarding_completed` ne change que par la RPC `complete_onboarding` (ADR-028).
 - Dates métier (`started_on`, futurs `local_date`) : type `date`, helpers de `src/lib/dates.ts`.
 - Nouvelle table utilisateur : ajouter un test dans `supabase/tests/` (bloc atomique `RLS_OK`).
+- « Aujourd'hui » = `getUserToday(profiles.timezone)`, jamais la date UTC. Écritures du check-in
+  uniquement via la RPC `save_checkin` ; seuls les check-ins terminés (`completed_at`) comptent.
+- Données sensibles (check-in, journal) : jamais dans les URL, les journaux ni un outil d'analytique.
+- Statistiques : fonctions pures de `src/features/progress/` (jamais dans le JSX), check-ins
+  terminés seulement ; journée sans check-in = inconnue (ADR-042) ; aucun agrégat persisté.
+- Tendances : uniquement via `insights.ts` (seuils + modèles), descriptives, jamais causales ni médicales.
+- États de journée : toujours via `getDayStateDisplay()` (`src/config/day-status.ts`), jamais un mapping local.
+- Périodes : journées calendaires locales (`src/features/progress/periods.ts`), jamais « N derniers
+  check-ins » ni `Date.now() - N × 24 h`. Analyses : seuils de `ANALYTICS_THRESHOLDS` /
+  `PROGRESS_INSIGHT_RULES`, écarts en points (pas en %), aucune note globale, aucune table d'agrégats.
+- Consommation : journées ≠ événements ; ne jamais additionner des quantités.
+- Calendrier : champs minimaux seulement ; journal : `search_journal` (côté base, paginé) ; le terme
+  recherché ne va jamais dans l'URL ni dans les journaux.
 - Chemins via `src/config/routes.ts` ; redirections via `getSafeRedirect()`.
 - Ne jamais journaliser courriel, mot de passe, jeton, cookie ni contenu personnel.
 - Journée locale (`date`) séparée des timestamps UTC (ADR-006).

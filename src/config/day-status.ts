@@ -1,7 +1,10 @@
 import {
+  Circle,
   CircleCheck,
   CircleDashed,
   CircleDot,
+  Minus,
+  PencilLine,
   Waves,
   type LucideIcon,
 } from "lucide-react";
@@ -77,3 +80,54 @@ export const dayVisualStatusConfig: Record<DayVisualStatus, DayVisualStatusDefin
     },
   },
 };
+
+/**
+ * États supplémentaires du calendrier (Sprint 5). Ils ne sont PAS des états de
+ * journée documentée : un brouillon ne compte pas comme journée suivie, une journée
+ * future n'est jamais « non documentée », une journée avant le début du parcours
+ * n'est pas une journée manquante.
+ */
+export type CalendarDayState = DayVisualStatus | "draft" | "future" | "before_journey";
+
+export const calendarExtraStateConfig: Record<
+  Exclude<CalendarDayState, DayVisualStatus>,
+  DayVisualStatusDefinition
+> = {
+  draft: {
+    label: "Check-in en cours",
+    description: "Un check-in a été commencé mais n'est pas terminé.",
+    icon: PencilLine,
+    className: {
+      solid: "bg-card text-primary border-dashed border-primary/60",
+      soft: "bg-card text-primary border border-dashed border-primary/60",
+      text: "text-primary",
+    },
+  },
+  future: {
+    label: "À venir",
+    description: "Cette journée n'est pas encore arrivée.",
+    icon: Circle,
+    className: {
+      solid: "bg-transparent text-muted-foreground/50",
+      soft: "bg-transparent text-muted-foreground/50 border border-dashed border-border",
+      text: "text-muted-foreground",
+    },
+  },
+  before_journey: {
+    label: "Avant ton parcours",
+    description: "Cette journée précède le début déclaré de ton parcours.",
+    icon: Minus,
+    className: {
+      solid: "bg-transparent text-muted-foreground/40",
+      soft: "bg-transparent text-muted-foreground/40",
+      text: "text-muted-foreground",
+    },
+  },
+};
+
+/** Affichage (libellé, icône, classes) de n'importe quel état de journée. */
+export function getDayStateDisplay(state: CalendarDayState): DayVisualStatusDefinition {
+  return state in dayVisualStatusConfig
+    ? dayVisualStatusConfig[state as DayVisualStatus]
+    : calendarExtraStateConfig[state as Exclude<CalendarDayState, DayVisualStatus>];
+}

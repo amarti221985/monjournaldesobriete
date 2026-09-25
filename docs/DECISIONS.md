@@ -12,7 +12,7 @@ acceptée : on en ajoute une nouvelle qui la remplace (statut « Remplacée par 
 | 004 | RLS obligatoire pour les données utilisateur | Acceptée |
 | 005 | Progression globale plutôt que série seule | Acceptée |
 | 006 | Dates locales séparées des timestamps UTC | Acceptée |
-| 007 | Check-in global + statut par substance | Acceptée (détails au Sprint 3) |
+| 007 | Check-in global + statut par substance | Remplacée en partie par ADR-037 et ADR-040 |
 | 008 | Règle de la série et objectifs « réduire » / « observer » | Acceptée (Sprint 2) |
 | 009 | Hébergement Hostinger Business (Node.js) et Node 24 LTS | Acceptée |
 | 010 | Supabase cloud sans dépendance à Docker | Acceptée |
@@ -39,6 +39,29 @@ acceptée : on en ajoute une nouvelle qui la remplace (statut « Remplacée par 
 | 031 | Brouillon de l'onboarding côté serveur | Acceptée |
 | 032 | Objectifs et motivations : enums PostgreSQL | Acceptée |
 | 033 | État de l'onboarding vérifié dans le proxy | Acceptée |
+| 034 | Un check-in par journée locale | Acceptée |
+| 035 | Enregistrement transactionnel du check-in (`save_checkin`) | Acceptée |
+| 036 | Relations du check-in : `user_id` + clés étrangères composites | Acceptée |
+| 037 | Consommations séparées du check-in | Acceptée |
+| 038 | Catalogues contrôlés : émotions, déclencheurs, accomplissements | Acceptée |
+| 039 | Brouillons et source des statistiques | Acceptée |
+| 040 | Statut choisi par l'utilisateur, indépendant de l'envie | Acceptée |
+| 041 | Progression cumulative avant la série | Acceptée |
+| 042 | Journées non documentées et séries (implémentation d'ADR-008) | Acceptée |
+| 043 | Graphique des scores | Acceptée |
+| 044 | Semaine du lundi et « 7 derniers jours » | Acceptée |
+| 045 | Tendances descriptives | Acceptée |
+| 046 | Calcul du tableau de bord à la volée | Acceptée |
+| 047 | Requêtes du calendrier minimales | Acceptée |
+| 048 | Journées manquantes : visibles dans le calendrier, absentes du journal | Acceptée |
+| 049 | Journal paginé, filtré et recherché côté base | Acceptée |
+| 050 | Recherche du journal privée | Acceptée |
+| 051 | Check-ins historiques modifiables, sans création rétroactive | Acceptée |
+| 052 | Périodes en journées calendaires locales | Acceptée |
+| 053 | Les analyses de progression restent dérivées | Acceptée |
+| 054 | Seuils minimaux d'échantillon | Acceptée |
+| 055 | Analyses descriptives, jamais causales | Acceptée |
+| 056 | Aucune note globale de progression | Acceptée |
 
 ---
 
@@ -113,6 +136,10 @@ acceptée : on en ajoute une nouvelle qui la remplace (statut « Remplacée par 
 
 ## ADR-007 — Check-in global + statut par substance
 
+- **Statut** : remplacée en partie au Sprint 3. Le statut du jour est **choisi** par
+  l'utilisateur (ADR-040, pas de seuil d'envie) et les consommations sont des événements par
+  substance (ADR-037) plutôt qu'une table de statuts par substance.
+
 - **Context** : un utilisateur peut suivre plusieurs substances. Un statut unique par jour
   (`sober` / `consumed`) est ambigu s'il a consommé une seule d'entre elles.
 - **Decision** : un check-in **global** par jour (humeur, énergie, stress, envie, réflexions) et
@@ -128,7 +155,7 @@ acceptée : on en ajoute une nouvelle qui la remplace (statut « Remplacée par 
 
 ## ADR-008 — Règle de la série et objectifs « réduire » / « observer »
 
-- **Statut** : acceptée au Sprint 2 (implémentation du calcul : Sprints 3-4).
+- **Statut** : acceptée au Sprint 2, **implémentée au Sprint 4** (ADR-042).
 - **Context** : il faut définir l'effet d'une journée sans check-in et le sens d'une série
   lorsque l'objectif n'est pas l'arrêt.
 - **Decision** :
@@ -414,3 +441,282 @@ acceptée : on en ajoute une nouvelle qui la remplace (statut « Remplacée par 
   HTTP 307. Les layouts gardent leur vérification.
 - **Consequences** : une requête supplémentaire par navigation protégée. En cas d'erreur de
   lecture, le proxy laisse passer et le layout décide.
+
+## ADR-034 — Un check-in par journée locale
+
+- **Decision** : `daily_checkins.checkin_date` est un `date` (journée locale), unique par
+  utilisateur (`UNIQUE (user_id, checkin_date)`). « Aujourd'hui » est calculé côté serveur par
+  `getUserToday(profiles.timezone)` (`src/lib/dates.ts`), jamais avec la date UTC. La date est
+  **figée à l'ouverture du wizard** : un check-in commencé à 23 h 58 reste sur cette journée
+  après minuit. Aucune journée future (Zod + RPC, fuseau du profil) ; les journées passées sont
+  acceptées par le modèle (historique, Sprint 5), mais l'interface ne propose que la journée.
+- **Consequences** : fuseau absent du profil → `siteConfig.defaultTimeZone` (`America/Toronto`)
+  pour déterminer la journée ; la borne « pas dans le futur » reste tolérante
+  (`Pacific/Kiritimati`, ADR-027) pour ne jamais refuser à tort.
+
+## ADR-035 — Enregistrement transactionnel du check-in (`save_checkin`)
+
+- **Decision** : toutes les écritures passent par `public.save_checkin(payload jsonb, finalize
+  boolean)`, `SECURITY INVOKER` (RLS et privilèges de l'utilisateur appliqués) :
+  verrou sur la journée, upsert du check-in, remplacement des émotions, déclencheurs,
+  accomplissements et consommations, puis `completed_at` si `finalize`. Identifiants de
+  catalogue transmis par **slug** et revalidés ; substances vérifiées (appartenance + actives).
+- **Idempotence** : double soumission → même état (un check-in, aucune ligne dupliquée).
+- **Modification** : même wizard, pré-rempli ; `completed_at` d'origine conservé. Un brouillon
+  (`finalize = false`) ne peut jamais écraser un check-in terminé (`checkin_already_completed`).
+  En modification, rien n'est enregistré avant « Enregistrer les modifications ».
+
+## ADR-036 — Relations du check-in : `user_id` + clés étrangères composites
+
+- **Decision** : `checkin_emotions`, `checkin_triggers`, `checkin_achievements` et
+  `consumption_events` portent `user_id` et référencent `daily_checkins (id, user_id)` ;
+  `consumption_events` référence aussi `user_substances (id, user_id)`.
+- **Reason** : RLS simple (`user_id = auth.uid()`, sans sous-requête sur le parent) et
+  impossibilité, **garantie par la base**, de rattacher une ligne au check-in ou à la substance
+  d'un autre utilisateur.
+- **Consequences** : `ON DELETE CASCADE` depuis le check-in ; une substance suivie n'est jamais
+  supprimée en cascade (ni ne peut l'être tant qu'elle a des consommations : on la désactive).
+
+## ADR-037 — Consommations séparées du check-in
+
+- **Decision** : le statut appartient au check-in global ; chaque consommation est un
+  `consumption_event` lié à une substance suivie. Plusieurs événements possibles (même substance
+  ou substances différentes) ; aucune obligation d'en créer un par substance suivie. Quantité,
+  unité, heure (`time`, heure locale : la date est celle du check-in), envie avant : tous
+  facultatifs, aucune précision inventée.
+- **Cohérence** : pour un check-in **terminé**, `status = 'consumed'` ⇔ au moins un événement.
+  Garantie par la RPC **et** par des triggers de contrainte `DEFERRABLE INITIALLY DEFERRED`
+  (vérifiés en fin de transaction, quel que soit le chemin d'écriture). `consumed → sober` :
+  les événements sont supprimés (confirmation demandée dans l'interface).
+- **Envie** : `daily_checkins.craving_score` = envie globale de la journée (toujours demandée,
+  même avec consommation) ; `consumption_events.craving_before` = envie juste avant un événement
+  précis (facultative).
+
+## ADR-038 — Catalogues contrôlés : émotions, déclencheurs, accomplissements
+
+- **Decision** : tables `emotions` (15, catégories `positive` / `difficult`), `trigger_types`
+  (13 ; nom choisi pour éviter la confusion avec les triggers PostgreSQL) et
+  `achievement_types` (11), lecture seule, alimentées par migration, slugs stables. Émotions
+  nommées par des noms communs (« Joie », « Fierté ») : aucun accord de genre. Précision
+  « Autre » pour les déclencheurs et accomplissements uniquement. « Aucun déclencheur
+  particulier » n'est pas stocké : l'absence de lignes suffit.
+
+## ADR-039 — Brouillons et source des statistiques
+
+- **Decision** : un check-in avec `completed_at IS NULL` est un **brouillon**, enregistré côté
+  serveur à chaque changement d'étape (aucune donnée dans le navigateur) et repris à la
+  première étape utile. Seuls les check-ins **terminés** (`completed_at IS NOT NULL`)
+  compteront comme journées suivies, sobres ou avec consommation (Sprints 4+). « Recommencer »
+  supprime le brouillon (politique `DELETE` limitée aux brouillons) ; un check-in terminé n'est
+  jamais supprimé depuis l'application.
+- **Consequences** : aucun agrégat stocké ; les statistiques seront calculées depuis les
+  check-ins terminés. Un check-in terminé exige ses 4 scores (contrainte `CHECK`).
+
+## ADR-040 — Statut choisi par l'utilisateur, indépendant de l'envie
+
+- **Decision** : `sober`, `sober_with_craving` et `consumed` sont choisis explicitement ;
+  `sober_with_craving` n'est jamais déduit de `craving_score` (envie 8 + « sober » est valide).
+- **Consequences** : l'état visuel de la journée découle du statut choisi (`sober` → sobre,
+  `sober_with_craving` → difficile, `consumed` → avec consommation). ADR-007 (seuil d'envie)
+  est remplacée sur ce point.
+
+## ADR-041 — Progression cumulative avant la série
+
+- **Context** : un tableau de bord centré sur la série donne l'impression que tout est perdu
+  après une consommation.
+- **Decision** : hiérarchie de `/today` : aujourd'hui → progression cumulative → constance
+  (semaine) → compréhension (graphique, tendances) → série. La valeur dominante est le nombre
+  de **journées sobres enregistrées** ; la série actuelle est une métrique parmi quatre.
+- **Définitions** (check-ins terminés uniquement, ADR-039) :
+  - **Jours suivis** = nombre de check-ins terminés ;
+  - **Jours sobres** = statut `sober` ou `sober_with_craving` — ne revient jamais à zéro ;
+  - **Jours avec consommation** = statut `consumed` (une journée, quel que soit le nombre
+    d'événements) ;
+  - **Taux de sobriété** = jours sobres / jours suivis × 100, affiché avec 1 décimale ;
+    aucun taux (pas de « 0 % ») sans check-in.
+- **Consequences** : après une consommation, le cumul et la meilleure série restent visibles ;
+  la série actuelle passe à 0 avec un message neutre. Métriques globales (statut du jour) :
+  pas de série par substance pour l'instant.
+
+## ADR-042 — Journées non documentées et séries (implémentation d'ADR-008)
+
+- **Decision** : une journée sans check-in terminé est **inconnue** : elle n'est ni sobre ni
+  avec consommation, ne compte pas dans le taux, n'ajoute rien à la série et n'est jamais
+  interprétée comme une consommation.
+  - **Série actuelle** = journées sobres **enregistrées** depuis la dernière consommation
+    enregistrée (les journées manquantes sont ignorées : lun S, mar —, mer S, jeu S → 3).
+  - **Meilleure série** = plus grand nombre de journées sobres enregistrées entre deux
+    consommations enregistrées.
+  - Libellés : « journées sobres enregistrées », jamais « jours consécutifs ».
+- **Implémentation** : `calculateStreaks()` (`src/features/progress/metrics.ts`), testée.
+
+## ADR-043 — Graphique des scores
+
+- **Decision** : un seul graphique (Recharts) : humeur, stress, envie sur 7 ou 30 jours
+  (aujourd'hui inclus). Journée sans check-in = absence de point (`connectNulls = false`),
+  jamais 0. Couleurs dédiées (`--series-mood`, `--series-stress`, `--series-craving`), distinctes
+  des couleurs d'état de journée, **validées** (bande de luminosité, chroma, séparation
+  daltonisme, contraste) en clair et en sombre ; encodage secondaire par motif de trait.
+- **Accessibilité** : légende textuelle, info-bulle (date + scores, aucun texte personnel),
+  résumé textuel des moyennes (1 décimale, format français) et tableau « Voir les valeurs » ;
+  le tracé est masqué aux lecteurs d'écran au profit de ces équivalents.
+
+## ADR-044 — Semaine du lundi et « 7 derniers jours »
+
+- **Decision** : « Cette semaine » va du **lundi au dimanche** (usage fr-CA). « Tes 7 derniers
+  jours » = aujourd'hui + les 6 jours calendaires précédents (et non les 7 derniers check-ins).
+  Toutes les journées sont calculées dans le fuseau du profil (`getUserToday`). Jours futurs
+  = « À venir » (jamais « non documentés ») ; aujourd'hui sans check-in = « à compléter ».
+- **Consequences** : seule la journée d'aujourd'hui est interactive dans la semaine (Sprint 5 :
+  historique).
+
+## ADR-045 — Tendances descriptives
+
+- **Decision** : pas d'IA ; quelques règles simples, centralisées dans
+  `src/features/progress/insights.ts`, calculées uniquement sur les check-ins terminés :
+  | Règle | Données minimales | Seuil d'affichage |
+  | --- | --- | --- |
+  | Évolution (stress, envie ou humeur) : 7 derniers check-ins vs 7 précédents | 14 check-ins | écart ≥ 1 point |
+  | Envie les jours avec / sans déclencheur « stress » | 10 check-ins, ≥ 3 jours dans chaque groupe | écart ≥ 1,5 |
+  | Envie les jours avec / sans « activité physique » | idem | écart ≥ 1,5 |
+  | Jour de la semaine où l'envie moyenne est la plus élevée | 14 check-ins, ≥ 3 observations ce jour | ≥ 1,5 au-dessus de la moyenne |
+  Aucune observation avant **7 check-ins terminés** ; **3 observations au maximum**.
+- **Formulations** : descriptives (« Dans tes données… », « sont associées à »), jamais
+  causales, jamais médicales, sans diagnostic ni prédiction ; vérifié par des tests.
+
+## ADR-046 — Calcul du tableau de bord à la volée
+
+- **Decision** : aucun agrégat persisté (pas de `current_streak`, `total_sober_days`, ni table
+  `statistics`). `/today` lance en parallèle 5 lectures (check-in du jour avec relations,
+  substances suivies, motivations, raison, check-ins terminés) après le profil ; la progression
+  est calculée par `buildDashboard()` (fonctions pures). La lecture statistique ne ramène que les
+  colonnes utiles (date, statut, 4 scores, slugs des déclencheurs et accomplissements), jamais
+  de texte personnel.
+- **Consequences** : suffisant pour quelques centaines de check-ins par utilisateur ; une
+  optimisation (vue SQL, agrégats) pourra être ajoutée si le volume l'exige. En cas d'erreur de
+  lecture, un message remplace la progression : jamais de statistiques à zéro.
+
+## ADR-047 — Requêtes du calendrier minimales
+
+- **Decision** : le calendrier ne lit que `checkin_date`, `status` et `completed_at`, sur la
+  période affichée (un mois ou une année), en une requête (`getCalendarEntries`). Jamais de
+  score, texte, émotion ni consommation pour dessiner la grille. États calculés par
+  `getCalendarDayState()` : futur → terminé (statut) → brouillon (« En cours ») → avant le
+  parcours → non documenté.
+- **Consequences** : le résumé annuel réutilise `calculateSobrietyMetrics()` (une seule
+  définition de « jour sobre », ADR-041). Mois et année courants selon `profiles.timezone` ;
+  pas de navigation au-delà du mois / de l'année en cours.
+
+## ADR-048 — Journées manquantes : visibles dans le calendrier, absentes du journal
+
+- **Decision** : le calendrier montre les trous (« Aucun check-in ») ; le journal ne liste que
+  les check-ins **terminés**. Les jours futurs sont « À venir », jamais « non documentés » ;
+  les jours avant le début déclaré du parcours sont neutres (« Avant ton parcours »). Légende
+  limitée à 4 états (sobre, forte envie, consommation, non documenté).
+- **Interactions** : journée terminée → `/journal/[date]` ; aujourd'hui sans check-in ou en
+  cours → check-in du jour ; journée passée non documentée → non cliquable.
+
+## ADR-049 — Journal paginé, filtré et recherché côté base
+
+- **Decision** : fonction SQL `search_journal()` (`SECURITY INVOKER`, RLS) : check-ins terminés,
+  `checkin_date DESC`, filtres statut / période, recherche, pagination par curseur de date
+  (`p_before`, 20 par page + 1 pour savoir s'il reste une page, « Afficher plus » — pas de
+  défilement infini). Les aperçus embarquent émotions et déclencheurs via PostgREST en une
+  requête ; le détail complet n'est chargé que sur `/journal/[date]`.
+- **Recherche** : `ILIKE` sur `victory_text`, `proud_of_text`, `lesson_text`,
+  `tomorrow_intention_text` et `notes`, motif échappé (`%`, `_`, `\` littéraux), terme borné à
+  100 caractères, insensible à la casse (pas aux accents : `unaccent` non activé). Suffisant pour
+  quelques centaines de journées par utilisateur ; la recherche plein texte PostgreSQL pourra
+  remplacer `ILIKE` si le volume l'exige.
+- **Index** : aucun ajouté — l'index unique `(user_id, checkin_date)` couvre le filtre par
+  utilisateur, la période et l'ordre décroissant.
+
+## ADR-050 — Recherche du journal privée
+
+- **Decision** : le terme recherché ne quitte jamais notre application et Supabase : envoyé dans
+  le corps d'une Server Action, **jamais dans l'URL** (seuls `status` et `period` y figurent),
+  jamais journalisé ni transmis à un service tiers. Bouton « Rechercher » (pas de requête à
+  chaque frappe).
+
+## ADR-051 — Check-ins historiques modifiables, sans création rétroactive
+
+- **Decision** : `/journal/[date]/edit` réutilise le wizard du check-in (mode modification,
+  pré-rempli, ouvert au résumé) ; la **date n'est pas modifiable** ; après enregistrement,
+  retour au détail relu depuis la base. Seul un check-in **terminé** peut être modifié ; cliquer
+  une journée passée sans check-in ne crée rien (V1). La suppression n'est pas exposée dans
+  l'interface.
+- **Paramètre `[date]`** : format strict `YYYY-MM-DD`, date réelle, jamais future ; sinon page
+  introuvable. Lecture limitée à l'utilisateur connecté (filtre `user_id` + RLS) : une date
+  d'un autre compte affiche « Aucun check-in enregistré ».
+- **Note technique** : le `loading.tsx` racine démarre le streaming avant la validation ; Next.js
+  rend alors `notFound()` / `redirect()` côté client avec un statut HTTP 200 (page « introuvable »
+  affichée, aucune donnée exposée, pages `noindex`).
+
+## ADR-052 — Périodes en journées calendaires locales
+
+- **Decision** : les périodes de `/progress` (et les filtres du journal, même module
+  `src/features/progress/periods.ts`) sont des **journées calendaires** dans le fuseau du profil :
+  « 30 jours » = aujourd'hui + les 29 journées précédentes, avec ou sans check-in — pas les
+  30 derniers check-ins. « Cette année » = du 1er janvier local à aujourd'hui ; « Tout » = depuis la
+  première journée enregistrée. Défaut : 30 jours (`?period=30d`, seule donnée lue dans l'URL).
+- **Période précédente** (7, 30, 90 jours) : les N journées qui se terminent la veille du début de la
+  période actuelle, sans chevauchement. Pas de comparaison pour « Cette année » et « Tout ».
+- **Timezone / DST** : bornes calculées sur des chaînes `YYYY-MM-DD` à partir de
+  `getUserToday(profiles.timezone)`, jamais `Date.now() - N × 24 h` : 30 jours restent 30 dates même
+  quand la période ne dure pas 720 heures (changement d'heure).
+
+## ADR-053 — Les analyses de progression restent dérivées
+
+- **Decision** : aucune table d'agrégats (`user_analytics`, `progress_statistics`…) ni RPC. Une seule
+  requête relationnelle charge les check-ins **terminés** (scores, statut, slugs et libellés des
+  déclencheurs / émotions / accomplissements, substance de chaque événement de consommation — ni
+  texte personnel, ni quantité) ; tout est calculé par des fonctions pures
+  (`buildProgressPage()`), période, période précédente et « Depuis le début » à partir du même jeu.
+  Le tableau de bord réutilise la même requête (`getProgressDataset`).
+- **Raisons** : volume de quelques centaines de lignes par utilisateur, nombre de requêtes constant
+  (2 en parallèle, même avec 100+ check-ins, aucun N+1), aucune définition dupliquée
+  (`calculateSobrietyMetrics`, `calculateStreaks`, `buildScoreSeries` du Sprint 4).
+- **Index** : aucun ajouté — l'index unique (`user_id`, `checkin_date`) couvre le filtre ; les
+  relations sont jointes par leur clé `checkin_id` (clés primaires / index existants).
+- **Cache** : `React.cache` par requête serveur seulement ; aucune statistique privée dans un cache
+  partagé.
+
+## ADR-054 — Seuils minimaux d'échantillon
+
+- **Decision** : aucune variation, association ni observation sur trop peu de données. Constantes
+  `ANALYTICS_THRESHOLDS` (`analytics.ts`) et `PROGRESS_INSIGHT_RULES` (`progress-insights.ts`) :
+
+| Règle | Seuil |
+| --- | --- |
+| Comparaison numérique de périodes | ≥ 3 check-ins dans **chacune** des deux périodes |
+| Score « relativement stable » | écart absolu < 0,5 point |
+| Association avec / sans (accomplissement, stress élevé) | ≥ 5 journées par groupe **et** écart ≥ 1 point |
+| Stress élevé | stress ≥ 7/10 |
+| Jour de la semaine comparé | ≥ 3 check-ins ce jour-là, au moins 2 jours éligibles |
+| Déclencheur et journées avec consommation | ≥ 3 journées avec consommation, déclencheur présent ≥ 2 fois |
+| Section « Ce que tes données montrent » | ≥ 10 check-ins terminés dans la période |
+| Observation d'évolution | ≥ 5 check-ins dans chaque période, écart ≥ 1 point |
+| Déclencheur / accomplissement le plus fréquent (observation) | ≥ 3 journées |
+
+- Sous le seuil : « Pas encore assez de données pour comparer ces périodes. » ou « Continue à
+  enregistrer tes journées » ; les métriques simples (comptes, moyennes) restent affichées.
+
+## ADR-055 — Analyses descriptives, jamais causales
+
+- **Decision** : 5 observations au plus sur `/progress` (3 sur `/today`, inchangé), générées par des
+  règles déterministes (aucune IA), dans l'ordre : évolution récente, déclencheurs, association avec
+  l'envie, jour de la semaine, accomplissements. Chaque observation donne sa base (« Basé sur 12
+  journées… »). Formulations « dans tes données », « associées à », « apparaît dans » ; jamais « cause »,
+  « risque », « rechute », diagnostic ni conseil médical (vérifié par les tests). Mention permanente :
+  une fréquence n'indique pas une cause.
+- **Écarts** en **points** sur 10 (« −1,2 point »), jamais en pourcentage ; sens décrit par « en
+  hausse / en baisse / relativement stable », jamais « bon », « mauvais », « inquiétant ».
+- **Émotions** : comptées par émotion, sans « score émotionnel » ni pourcentage positif / négatif.
+- **Consommation** : journées ≠ événements ; répartition par substance en nombre d'événements ; les
+  quantités (unités hétérogènes) ne sont jamais additionnées ; objectifs rappelés sans verdict.
+
+## ADR-056 — Aucune note globale de progression
+
+- **Decision** : pas de « score de progression », de note sur 100 ni de lettre. La page montre des
+  comptes (jours sobres, jours suivis), un taux explicite (jours sobres ÷ check-ins terminés), des
+  moyennes et des séries ; chaque chiffre dit ce qu'il mesure et sur quelle période.

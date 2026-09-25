@@ -1,3 +1,4 @@
+import { siteConfig } from "@/config/site";
 import { isValidTimeZone } from "@/lib/timezone";
 
 /**
@@ -57,4 +58,95 @@ export function formatLongDate(date: string): string {
     year: "numeric",
     timeZone: "UTC",
   }).format(new Date(`${date}T00:00:00Z`));
+}
+
+/**
+ * « Aujourd'hui » pour l'utilisateur (ADR-034) : journée locale dans le fuseau de son
+ * profil, jamais `new Date().toISOString().slice(0, 10)` (qui donne la date UTC).
+ * Sans fuseau valide : fuseau par défaut de l'application.
+ */
+export function getUserToday(timeZone: string | null | undefined, now: Date = new Date()): string {
+  return getLocalDateString(isValidTimeZone(timeZone) ? timeZone : siteConfig.defaultTimeZone, now);
+}
+
+/** « jeudi 24 septembre 2026 » — journée locale, sans conversion de fuseau. */
+export function formatWeekdayDate(date: string): string {
+  return new Intl.DateTimeFormat("fr-CA", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(`${date}T00:00:00Z`));
+}
+
+const DAY_MS = 86_400_000;
+
+/** Journée locale décalée de `days` jours (calcul calendaire, sans fuseau). */
+export function addDays(date: string, days: number): string {
+  return new Date(Date.parse(`${date}T00:00:00Z`) + days * DAY_MS).toISOString().slice(0, 10);
+}
+
+/** Jour de la semaine d'une journée locale : 0 = lundi … 6 = dimanche (ADR-044). */
+export function getMondayBasedWeekday(date: string): number {
+  return (new Date(`${date}T00:00:00Z`).getUTCDay() + 6) % 7;
+}
+
+/** Lundi de la semaine contenant `date` (semaine commençant le lundi). */
+export function getWeekStart(date: string): string {
+  return addDays(date, -getMondayBasedWeekday(date));
+}
+
+/** Nombre de jours entre deux journées locales (b - a). */
+export function daysBetween(a: string, b: string): number {
+  return Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / DAY_MS);
+}
+
+/** Formatage court d'une journée locale, ex. options { weekday: "short" } → « jeu. ». */
+export function formatLocalDate(date: string, options: Intl.DateTimeFormatOptions): string {
+  return new Intl.DateTimeFormat("fr-CA", { ...options, timeZone: "UTC" }).format(new Date(`${date}T00:00:00Z`));
+}
+
+/*
+ * Mois métier « YYYY-MM » (calendrier). Calculs calendaires purs, sans fuseau :
+ * « aujourd'hui » vient toujours de getUserToday(profiles.timezone).
+ */
+
+const MONTH_KEY_FORMAT = /^\d{4}-(0[1-9]|1[0-2])$/;
+
+export function isValidMonthKey(value: unknown): value is string {
+  return typeof value === "string" && MONTH_KEY_FORMAT.test(value) && value >= "1900-01";
+}
+
+/** « 2026-09-24 » → « 2026-09 ». */
+export function getMonthKey(date: string): string {
+  return date.slice(0, 7);
+}
+
+/** Mois décalé de `months` mois : addMonths("2026-01", -1) → « 2025-12 ». */
+export function addMonths(monthKey: string, months: number): string {
+  const [year, month] = monthKey.split("-").map(Number);
+  const index = year * 12 + (month - 1) + months;
+  return `${String(Math.floor(index / 12)).padStart(4, "0")}-${String((index % 12) + 1).padStart(2, "0")}`;
+}
+
+export function getDaysInMonth(monthKey: string): number {
+  const [year, month] = monthKey.split("-").map(Number);
+  return new Date(Date.UTC(year, month, 0)).getUTCDate();
+}
+
+/** Premier et dernier jour d'un mois (bornes inclusives). */
+export function getMonthRange(monthKey: string): { start: string; end: string } {
+  return { start: `${monthKey}-01`, end: `${monthKey}-${String(getDaysInMonth(monthKey)).padStart(2, "0")}` };
+}
+
+/** « septembre 2026 » */
+export function formatMonthYear(monthKey: string): string {
+  return formatLocalDate(`${monthKey}-01`, { month: "long", year: "numeric" });
+}
+
+/** Libellé court et sûr pour l'URL d'une journée : « /journal/2026-09-24 ». */
+export function toDateSegment(date: string): string {
+  if (!isValidDateString(date)) throw new Error("Date invalide.");
+  return date;
 }

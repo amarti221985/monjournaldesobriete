@@ -1,7 +1,7 @@
 # Base de données
 
 > Le schéma est construit progressivement, sprint par sprint.
-> Sprint 1 : `profiles`. Sprint 2 : catalogue `substances` et données du parcours (voir [Schéma actuel](#schéma-actuel)).
+> Sprint 1 : `profiles`. Sprint 2 : catalogue `substances` et données du parcours. Sprint 3 : check-in quotidien (voir [Schéma actuel](#schéma-actuel)).
 
 ## Plateforme
 
@@ -199,6 +199,136 @@ seule, `onboarding_completed` non modifiable, finalisation multi-substance, idem
 isolation A/B sur les 4 tables, refus atomiques (sans substance, raison, motivation, date
 future, principale invalide), accès anonyme refusé.
 
+### Check-in quotidien — migration `20260926090000_create_daily_checkins.sql`
+
+**Enum** `checkin_status` : `sober` | `sober_with_craving` | `consumed`.
+
+| Table | Rôle | Points clés |
+| --- | --- | --- |
+| `emotions`, `trigger_types`, `achievement_types` | Catalogues (lecture seule) | slug stable, `name_fr`, `sort_order`, `is_active` ; `emotions.category` = `positive` \| `difficult` |
+| `daily_checkins` | Check-in d'une journée locale | `checkin_date date` ; `UNIQUE (user_id, checkin_date)` ; scores `mood`/`energy`/`stress` 1-10, `craving` 0-10 (`CHECK`) ; textes ≤ 1000 / 2000 / 2000 / 1000 / 5000 ; `completed_at` (NULL = brouillon) ; terminé ⇒ 4 scores |
+| `checkin_emotions` | Émotions du check-in | PK (`checkin_id`, `emotion_id`) |
+| `checkin_triggers` | Déclencheurs | PK (`checkin_id`, `trigger_type_id`), `custom_label` ≤ 80 |
+| `checkin_achievements` | Accomplissements | PK (`checkin_id`, `achievement_type_id`), `custom_label` ≤ 80 |
+| `consumption_events` | Consommations | `user_substance_id`, `quantity numeric(10,2)` (0 < q ≤ 10000), `unit` ≤ 40, `occurred_at time`, `craving_before` 0-10, textes ≤ 2000 |
+
+- **Intégrité (ADR-036)** : `user_id` sur chaque relation + clés étrangères composites vers
+  `daily_checkins (id, user_id)` (cascade) et `user_substances (id, user_id)` (pas de cascade).
+  Ajout de `UNIQUE (id, user_id)` sur `user_substances`.
+- **Cohérence (ADR-037)** : triggers de contrainte différés `daily_checkins_consumption_consistency`
+  et `consumption_events_consistency` → `checkin_consumption_inconsistent`.
+- **Index** : unicité (`user_id`, `checkin_date`) ; `user_id` sur les relations ;
+  `consumption_events (checkin_id)`, `(user_substance_id)`.
+- **RPC** `save_checkin(payload jsonb, finalize boolean default false) returns jsonb` :
+  `SECURITY INVOKER`. Payload :
+
+```json
+{
+  "checkinDate": "2026-09-24",
+  "status": "consumed",
+  "moodScore": 6, "energyScore": 5, "stressScore": 7, "cravingScore": 8,
+  "emotions": ["stress", "fatigue"],
+  "triggers": [{ "slug": "other", "customLabel": "…" }],
+  "achievements": [{ "slug": "exercise" }],
+  "victoryText": "…", "proudOfText": null, "lessonText": null,
+  "tomorrowIntentionText": null, "notes": null,
+  "consumptionEvents": [
+    { "userSubstanceId": "uuid", "quantity": 1.5, "unit": "joint", "occurredAt": "21:30",
+      "cravingBefore": 7, "contextText": "…", "reflectionText": null, "nextTimeStrategyText": null }
+  ]
+}
+```
+
+Retour : `{ id, checkinDate, completed }`. Erreurs : `invalid_checkin_date`, `invalid_values`,
+`invalid_status`, `missing_scores`, `invalid_emotions`, `invalid_triggers`,
+`invalid_achievements`, `invalid_consumption_events`, `consumption_events_not_allowed`,
+`consumption_event_required`, `checkin_already_completed`.
+
+- **RLS** : catalogues → `select` des lignes actives. `daily_checkins` → `select`, `insert`,
+  `update` de ses lignes ; `delete` **des brouillons seulement**. Relations → `select`,
+  `insert`, `delete` de ses lignes (+ `update` pour `consumption_events`). `anon` : aucun accès.
+  `UPDATE` limité aux colonnes métier.
+
+### Vérifier le check-in
+
+```bash
+npx supabase db query --linked -f supabase/tests/checkins_rls.sql
+```
+
+Résultat attendu : `RLS_OK — checkins : 26 vérifications réussies`. Couvre : catalogues en
+lecture seule, brouillon, scores exigés, finalisation, idempotence, précision « other »,
+brouillon qui n'écrase pas un terminé, unicité par journée, date future, `consumed` sans
+événement, `sober` avec événement, `sober → consumed` (une substance sur deux, deux
+événements), `consumed → sober` (sans orphelin), cohérence hors RPC, substance d'un autre
+utilisateur (RPC et clé composite), suppression interdite d'un terminé et permise d'un
+brouillon, score hors limite, isolation A/B sur les 5 tables.
+
+### Statistiques (Sprint 4) — aucune migration
+
+Aucune table ni colonne ajoutée : les métriques sont **calculées** à partir des check-ins
+terminés (ADR-041, ADR-046). Requête de lecture :
+
+```text
+daily_checkins (checkin_date, status, mood_score, energy_score, stress_score, craving_score)
+  + checkin_triggers → trigger_types.slug
+  + checkin_achievements → achievement_types.slug
+WHERE user_id = <utilisateur> AND completed_at IS NOT NULL   (RLS en plus)
+ORDER BY checkin_date
+```
+
+Couverte par l'index unique (`user_id`, `checkin_date`). Les brouillons et les textes personnels
+ne sont jamais lus par les statistiques.
+
+### Progression (Sprint 6) — aucune migration
+
+Aucune table, colonne, fonction ni index ajouté ; aucune table d'agrégats (ADR-053). Une requête
+relationnelle (`getProgressDataset`), partagée avec le tableau de bord :
+
+```text
+daily_checkins (checkin_date, status, mood_score, energy_score, stress_score, craving_score)
+  + checkin_triggers → trigger_types (slug, name_fr)
+  + checkin_achievements → achievement_types (slug, name_fr)
+  + checkin_emotions → emotions (slug, name_fr)
+  + consumption_events (user_substance_id) → user_substances (custom_name) → substances (name_fr)
+WHERE user_id = <session> AND completed_at IS NOT NULL   (RLS sur chaque table)
+ORDER BY checkin_date
+```
+
+- **Index** : l'index unique (`user_id`, `checkin_date`) couvre le filtre ; les relations sont
+  résolues par `checkin_id` (clés primaires composites / `consumption_events_checkin_id_idx`). Pas
+  d'index de plage supplémentaire : le volume par utilisateur reste de quelques centaines de lignes.
+- **Jamais lus** : textes de réflexion, notes, contexte / réflexion / stratégie des consommations,
+  précisions « Autre » des déclencheurs et accomplissements, quantités et unités.
+- **Isolation** : aucun `user_id` venant du navigateur ; la RLS existante (Sprint 3) s'applique à
+  chaque table jointe (vérifiée par `checkins_rls.sql` et le test d'intégration Sprint 6).
+
+### Journal — migration `20260927090000_create_journal_search.sql`
+
+`search_journal(p_status checkin_status, p_from date, p_before date, p_query text, p_limit int)
+returns setof daily_checkins` — `SECURITY INVOKER`, `STABLE` (ADR-049, ADR-050) :
+
+- check-ins **terminés** de `auth.uid()` seulement (RLS en plus), `ORDER BY checkin_date DESC` ;
+- `p_status` (statut), `p_from` (première journée incluse), `p_before` (curseur exclusif) ;
+- `p_query` : `ILIKE` sur les 5 champs de réflexion, `%`, `_` et `\` échappés, 100 caractères max ;
+- `p_limit` borné à 51 (l'application demande 21 : 20 affichées + 1 pour « Afficher plus »).
+
+Appelée avec un `select` imbriqué (émotions, déclencheurs) pour les aperçus. Aucun index ajouté :
+l'index unique (`user_id`, `checkin_date`) suffit (parcours arrière pour l'ordre décroissant).
+
+**Calendrier** : lecture de `checkin_date`, `status`, `completed_at` sur la période affichée,
+sans migration. Dates métier manipulées comme chaînes `YYYY-MM-DD` de bout en bout (jamais
+converties en timestamp ; `src/lib/dates.ts`).
+
+### Vérifier le journal
+
+```bash
+npx supabase db query --linked -f supabase/tests/journal_rls.sql
+```
+
+Résultat attendu : `RLS_OK — journal : 14 vérifications réussies` (pagination, brouillons exclus,
+recherche, casse, combinaison recherche + statut + période, jokers littéraux, taille de page,
+isolation A/B, lecture d'une date d'un autre compte).
+
 ## Grandes entités envisagées
 
 Conçues sprint par sprint (noms indicatifs, susceptibles d'évoluer) :
@@ -211,10 +341,10 @@ Conçues sprint par sprint (noms indicatifs, susceptibles d'évoluer) :
 | `personal_reasons`, `user_motivations`, `support_contacts` | 2 ✅ | Pourquoi, motivations, soutien |
 | `onboarding_drafts` | 2 ✅ | Brouillon du wizard (supprimé à la finalisation) |
 | `personal_goals` | 8 | Objectifs personnels (Mon plan) |
-| `daily_checkins` | 3 | Check-in global du jour (humeur, énergie, stress, envie, réflexions) |
-| `checkin_substance_statuses` | 3 | Statut du jour **par substance suivie** (voir ADR-007) |
-| `checkin_emotions`, `checkin_triggers`, `checkin_achievements` | 3 | Détails du check-in |
-| `consumption_events` | 3 | Détails d'une consommation |
+| `daily_checkins` | 3 ✅ | Check-in global du jour (humeur, énergie, stress, envie, réflexions) |
+| `emotions`, `trigger_types`, `achievement_types` | 3 ✅ | Catalogues contrôlés du check-in |
+| `checkin_emotions`, `checkin_triggers`, `checkin_achievements` | 3 ✅ | Détails du check-in |
+| `consumption_events` | 3 ✅ | Consommations par substance suivie (ADR-037) |
 | `craving_events`, `craving_strategies`, `craving_interventions` | 7 | Mode envie forte et timer |
 | `journal_entries` | 5 | Réflexions libres |
 | `user_milestones` | 9 | Seulement si un stockage est justifié (sinon calculé) |

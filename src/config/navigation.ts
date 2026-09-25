@@ -23,9 +23,9 @@ export type NavigationItem = {
 /** Navigation principale de l'application authentifiée (sidebar + barre mobile). */
 export const primaryNavigation: readonly NavigationItem[] = [
   { label: "Aujourd'hui", shortLabel: "Aujourd'hui", href: routes.today, icon: Sun, available: true },
-  { label: "Calendrier", shortLabel: "Calendrier", href: routes.calendar, icon: CalendarDays, available: false },
-  { label: "Journal", shortLabel: "Journal", href: routes.journal, icon: BookOpen, available: false },
-  { label: "Progression", shortLabel: "Progression", href: routes.progress, icon: TrendingUp, available: false },
+  { label: "Calendrier", shortLabel: "Calendrier", href: routes.calendar, icon: CalendarDays, available: true },
+  { label: "Journal", shortLabel: "Journal", href: routes.journal, icon: BookOpen, available: true },
+  { label: "Progression", shortLabel: "Progression", href: routes.progress, icon: TrendingUp, available: true },
   { label: "Mon plan", shortLabel: "Plan", href: routes.plan, icon: Compass, available: false },
 ];
 

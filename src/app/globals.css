@@ -66,6 +66,11 @@
   --color-status-untracked-soft: var(--status-untracked-soft);
   --color-status-untracked-foreground: var(--status-untracked-foreground);
 
+  --color-series-mood: var(--series-mood);
+  --color-series-energy: var(--series-energy);
+  --color-series-stress: var(--series-stress);
+  --color-series-craving: var(--series-craving);
+
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -134,6 +139,12 @@
   --status-untracked: oklch(0.8 0.01 85);
   --status-untracked-soft: oklch(0.95 0.005 90);
   --status-untracked-foreground: oklch(0.47 0.012 75);
+
+  /* Séries des graphiques de scores (validées : contraste + daltonisme, voir ADR-043) */
+  --series-mood: #2a6fd0;
+  --series-energy: #1f8a70;
+  --series-stress: #c9661f;
+  --series-craving: #a8337a;
 }
 
 /* Thème sombre préparé (non activé au Sprint 0) */
@@ -181,6 +192,10 @@
   --status-untracked: oklch(0.5 0.01 85);
   --status-untracked-soft: oklch(0.28 0.008 90);
   --status-untracked-foreground: oklch(0.8 0.01 90);
+  --series-mood: #3a7be0;
+  --series-energy: #27a383;
+  --series-stress: #cf6f22;
+  --series-craving: #c2509e;
 }
 
 @layer base {
