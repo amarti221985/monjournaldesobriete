@@ -15,8 +15,17 @@ import { z } from "zod";
 
 type EnvSource = Record<string, string | undefined>;
 
-const emptyToUndefined = (value: unknown) =>
-  typeof value === "string" && value.trim() === "" ? undefined : value;
+/**
+ * Nettoie une valeur saisie dans un panneau d'hébergement : espaces et guillemets
+ * entourants retirés (copie de « KEY="valeur" »). Vide → absente.
+ */
+export function cleanEnvValue(value: unknown): unknown {
+  if (typeof value !== "string") return value;
+  const clean = value.trim().replace(/^(["'])(.*)\1$/, "$2").trim();
+  return clean === "" ? undefined : clean;
+}
+
+const emptyToUndefined = cleanEnvValue;
 
 const httpUrl = z.url({ protocol: /^https?$/ });
 
@@ -95,6 +104,21 @@ export function getSupabaseEnv(): SupabaseEnv {
       readRuntimeEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"),
   });
   return supabaseEnv;
+}
+
+export type EnvVariableState = "ok" | "missing" | "invalid";
+
+/** État de chaque variable Supabase (diagnostic de déploiement) — jamais la valeur. */
+export function getSupabaseEnvDiagnostics(): Record<keyof z.infer<typeof supabaseEnvSchema>, EnvVariableState> {
+  const state = (name: string, isValid: (value: string) => boolean): EnvVariableState => {
+    const value = cleanEnvValue(readRuntimeEnv(name));
+    if (typeof value !== "string") return "missing";
+    return isValid(value) ? "ok" : "invalid";
+  };
+  return {
+    NEXT_PUBLIC_SUPABASE_URL: state("NEXT_PUBLIC_SUPABASE_URL", (value) => httpUrl.safeParse(value).success),
+    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: state("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", (value) => value.length > 0),
+  };
 }
 
 /** URL publique de l'application (défaut : http://localhost:3000). */

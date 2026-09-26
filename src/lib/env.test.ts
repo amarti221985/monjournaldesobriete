@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { EnvValidationError, parseSiteUrl, parseSupabaseEnv } from "@/lib/env";
+import { cleanEnvValue, EnvValidationError, parseSiteUrl, parseSupabaseEnv } from "@/lib/env";
 
 describe("parseSupabaseEnv", () => {
   it("retourne la configuration lorsque les variables sont valides", () => {
@@ -53,5 +53,21 @@ describe("parseSiteUrl", () => {
     expect(
       parseSiteUrl({ NEXT_PUBLIC_SITE_URL: "https://journal.example.com" }).origin,
     ).toBe("https://journal.example.com");
+  });
+});
+
+describe("cleanEnvValue", () => {
+  it("retire espaces et guillemets entourants copiés d'un panneau d'hébergement", () => {
+    expect(cleanEnvValue('  "https://exemple.supabase.co"  ')).toBe("https://exemple.supabase.co");
+    expect(cleanEnvValue("'sb_publishable_fictif'")).toBe("sb_publishable_fictif");
+    expect(cleanEnvValue('   ')).toBeUndefined();
+  });
+
+  it("accepte une URL Supabase entourée de guillemets", () => {
+    const env = parseSupabaseEnv({
+      NEXT_PUBLIC_SUPABASE_URL: '"https://exemple.supabase.co"',
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: " sb_publishable_fictif ",
+    });
+    expect(env).toEqual({ url: "https://exemple.supabase.co", publishableKey: "sb_publishable_fictif" });
   });
 });

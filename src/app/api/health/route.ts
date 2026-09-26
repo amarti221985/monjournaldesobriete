@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 
-import { EnvValidationError, getSiteUrl, getSupabaseEnv } from "@/lib/env";
+import { EnvValidationError, getSiteUrl, getSupabaseEnv, getSupabaseEnvDiagnostics } from "@/lib/env";
 
 export const dynamic = "force-dynamic";
 
 /**
- * Diagnostic de déploiement : indique seulement si la configuration publique est
- * présente (oui / non). Aucune valeur, clé ni donnée utilisateur n'est renvoyée.
+ * Diagnostic de déploiement : indique seulement si chaque variable publique est
+ * présente et bien formée (« ok », « missing », « invalid »). Aucune valeur, clé ni
+ * donnée utilisateur n'est renvoyée.
  */
 export function GET() {
   let supabaseConfigured = true;
@@ -25,7 +26,13 @@ export function GET() {
   }
 
   return NextResponse.json(
-    { status: supabaseConfigured ? "ok" : "misconfigured", supabaseConfigured, siteUrlConfigured, revision: 2 },
+    {
+      status: supabaseConfigured ? "ok" : "misconfigured",
+      supabaseConfigured,
+      siteUrlConfigured,
+      variables: getSupabaseEnvDiagnostics(),
+      revision: 3,
+    },
     { status: supabaseConfigured ? 200 : 503, headers: { "Cache-Control": "no-store" } },
   );
 }
