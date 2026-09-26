@@ -43,7 +43,7 @@ plusieurs substances (alcool, cannabis, nicotine, stimulants, opioïdes, autres)
 | Mon plan | Raisons, motivations, déclencheurs connus, stratégies, soutien, lettre à soi-même |
 | Accomplissements | Continuité et progression cumulative, calculés depuis les données réelles |
 | PWA & notifications | Installation mobile, rappels |
-| Confidentialité | Export, suppression des données et du compte |
+| Confidentialité | Export (dont PDF), suppression des données et du compte |
 | IA (éventuelle) | Résumés et réflexion guidée, uniquement avec consentement explicite |
 
 ## Roadmap
@@ -61,8 +61,15 @@ plusieurs substances (alcool, cannabis, nicotine, stimulants, opioïdes, autres)
 | 8 | Mon plan | |
 | 9 | Accomplissements | |
 | 10 | PWA et notifications | |
-| 11 | Sécurité, confidentialité, export et suppression | |
+| 11 | Sécurité, confidentialité, export (PDF) et suppression | |
 | 12 | Fonctionnalités IA éventuelles | |
+
+### Sprint 11 — export PDF (ajout demandé)
+
+En plus de l'export des données prévu, l'utilisateur pourra **télécharger ses données en PDF** :
+document lisible généré à la demande (journal, check-ins, progression, plan), uniquement pour
+l'utilisateur connecté (session + RLS), sans passer par un service tiers, sans stockage du fichier
+sur le serveur et sans données sensibles dans l'URL. Choix de la période et des sections à inclure.
 
 Règle : chaque sprint implémente **uniquement son périmètre**, sans développer
 prématurément les fonctionnalités futures.
