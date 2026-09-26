@@ -109,7 +109,8 @@ npm start
 4. Définir les variables d'environnement dans hPanel (`NEXT_PUBLIC_SUPABASE_URL`,
    `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `NEXT_PUBLIC_SITE_URL=https://ton-domaine`).
    Les variables `NEXT_PUBLIC_*` sont intégrées **au moment du build** : redéployer après
-   les avoir modifiées.
+   les avoir modifiées. Si l'hébergeur ne les fournit qu'au démarrage, le serveur les relit
+   à l'exécution (`src/lib/env.ts`).
 5. Dans Supabase, ajouter `https://ton-domaine/auth/callback` aux Redirect URLs et régler
    la Site URL (voir [docs/SUPABASE_SETUP.md](docs/SUPABASE_SETUP.md)).
 6. HTTPS activé sur le domaine.

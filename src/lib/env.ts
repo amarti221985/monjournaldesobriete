@@ -73,14 +73,26 @@ export function parseSiteUrl(source: EnvSource): URL {
   return new URL(result.data.NEXT_PUBLIC_SITE_URL);
 }
 
+/**
+ * Lecture DYNAMIQUE côté serveur (process.env[name] n'est pas figé au build).
+ * Certains hébergeurs (Hostinger) ne fournissent les variables qu'au démarrage :
+ * la valeur figée au build est alors vide et on relit la variable à l'exécution.
+ * Dans le navigateur, process.env est vide : seule la valeur figée compte.
+ */
+function readRuntimeEnv(name: string): string | undefined {
+  return typeof process === "undefined" ? undefined : process.env[name];
+}
+
 let supabaseEnv: SupabaseEnv | undefined;
 
 /** Configuration Supabase publique, validée au premier appel. */
 export function getSupabaseEnv(): SupabaseEnv {
   supabaseEnv ??= parseSupabaseEnv({
-    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    NEXT_PUBLIC_SUPABASE_URL:
+      process.env.NEXT_PUBLIC_SUPABASE_URL || readRuntimeEnv("NEXT_PUBLIC_SUPABASE_URL"),
     NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:
-      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+      readRuntimeEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"),
   });
   return supabaseEnv;
 }
@@ -88,6 +100,6 @@ export function getSupabaseEnv(): SupabaseEnv {
 /** URL publique de l'application (défaut : http://localhost:3000). */
 export function getSiteUrl(): URL {
   return parseSiteUrl({
-    NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
+    NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL || readRuntimeEnv("NEXT_PUBLIC_SITE_URL"),
   });
 }
