@@ -170,19 +170,32 @@ describe("validateWeeklyReflection — garde-fous", () => {
   const dataset = buildWeeklyInsightDataset(source(), ENABLED);
 
   it("accepte une sortie conforme et fondée", () => {
-    expect(validateWeeklyReflection(validReflection(), dataset)).toMatchObject({ ok: true });
+    expect(validateWeeklyReflection(validReflection(), dataset)).toMatchObject({ ok: true, removed: 0 });
   });
 
   it("refuse une sortie hors schéma", () => {
-    expect(validateWeeklyReflection({ summary: "Trop court" }, dataset)).toEqual({ ok: false, reason: "schema" });
-    expect(validateWeeklyReflection({ ...validReflection(), reflection_questions: ["Une seule question ?"] }, dataset)).toEqual({ ok: false, reason: "schema" });
-    const tooMany = { ...validReflection(), progress: Array.from({ length: 4 }, () => validReflection().progress[0]) };
-    expect(validateWeeklyReflection(tooMany, dataset)).toEqual({ ok: false, reason: "schema" });
+    expect(validateWeeklyReflection("texte", dataset)).toEqual({ ok: false, reason: "schema" });
+    expect(validateWeeklyReflection({ ...validReflection(), summary: "Trop court" }, dataset)).toEqual({ ok: false, reason: "schema_summary" });
+    expect(validateWeeklyReflection({ ...validReflection(), reflection_questions: ["Une seule question ?"] }, dataset)).toEqual({ ok: false, reason: "schema_reflection_questions" });
   });
 
-  it("refuse une observation appuyée sur des données absentes", () => {
-    const ungrounded = { ...validReflection(), progress: [{ text: "Tes réflexions montrent une belle constance.", evidence_keys: ["reflections"] }] };
-    expect(validateWeeklyReflection(ungrounded, dataset)).toEqual({ ok: false, reason: "ungrounded_evidence" });
+  it("tronque les listes trop longues", () => {
+    const tooMany = { ...validReflection(), progress: Array.from({ length: 4 }, (_, index) => ({ text: `Observation fictive numéro ${index}.`, evidence_keys: ["tracked_days"] })) };
+    const result = validateWeeklyReflection(tooMany, dataset);
+    expect(result.ok && result.reflection.progress).toHaveLength(3);
+    expect(result.ok && result.removed).toBe(1);
+  });
+
+  it("retire une observation appuyée sur des données absentes ou inconnues", () => {
+    const ungrounded = {
+      ...validReflection(),
+      progress: [
+        { text: "Tes réflexions montrent une belle constance.", evidence_keys: ["reflections", "inventee"] },
+        { text: "Tu as suivi cinq journées cette semaine.", evidence_keys: ["tracked_days", "inventee"] },
+      ],
+    };
+    const result = validateWeeklyReflection(ungrounded, dataset);
+    expect(result.ok && result.reflection.progress).toEqual([{ text: "Tu as suivi cinq journées cette semaine.", evidence_keys: ["tracked_days"] }]);
   });
 
   it.each([
@@ -191,9 +204,17 @@ describe("validateWeeklyReflection — garde-fous", () => {
     ["causality", "Le stress cause tes consommations du vendredi."],
     ["judgment", "Cette journée a été un échec malgré tes efforts."],
     ["injunction", "Tu dois arrêter de sortir le vendredi soir."],
-  ])("refuse le vocabulaire interdit : %s", (reason, text) => {
+  ])("vocabulaire interdit (%s) : observation retirée, résumé refusé", (reason, text) => {
     const output = { ...validReflection(), recurring_themes: [{ text, evidence_keys: ["frequent_triggers"] }] };
-    expect(validateWeeklyReflection(output, dataset)).toEqual({ ok: false, reason });
+    const filtered = validateWeeklyReflection(output, dataset);
+    expect(filtered.ok && filtered.reflection.recurring_themes).toEqual([]);
+    expect(JSON.stringify(filtered)).not.toContain(text);
+    expect(validateWeeklyReflection({ ...validReflection(), summary: `${text} Résumé fictif de la semaine.` }, dataset)).toEqual({ ok: false, reason: `summary_${reason}` });
+  });
+
+  it("refuse la sortie s'il reste moins de 2 questions conformes", () => {
+    const output = { ...validReflection(), reflection_questions: ["Qu'est-ce qui t'a aidé mardi ?", "Pourquoi as-tu échoué vendredi ?"] };
+    expect(validateWeeklyReflection(output, dataset)).toEqual({ ok: false, reason: "schema_reflection_questions" });
   });
 });
 

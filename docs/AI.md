@@ -83,9 +83,11 @@ unitaires (marqueurs fictifs) et par un test d'intégration qui capture la requ�
   cause, progression plutôt que perfection, aucun jugement ni injonction, comportements observables.
 - Sortie validée par un schéma Zod strict (`weeklyReflectionSchema`) : tailles, 0 à 3 observations
   par section, 2 ou 3 questions, `evidence_keys` d'une liste fermée.
-- `validateWeeklyReflection` refuse une observation appuyée sur une donnée absente du jeu envoyé
-  et tout vocabulaire interdit (diagnostic, prédiction, causalité, jugement, injonction). Une
-  sortie refusée n'est jamais enregistrée ; une seule nouvelle génération est tentée.
+- `validateWeeklyReflection` **retire** (sans jamais réécrire) toute observation ou question non
+  conforme : clés de justification absentes du jeu envoyé ou inconnues, tailles hors limites,
+  vocabulaire interdit (diagnostic, prédiction, causalité, jugement, injonction) ; listes
+  tronquées à 3. La sortie entière est refusée si le résumé est non conforme ou s'il reste moins
+  de 2 questions ; une seule nouvelle génération est alors tentée. Rien de refusé n'est enregistré.
 - Le texte est rendu par React (échappé), jamais comme HTML.
 
 ## Limites et coûts
@@ -103,6 +105,15 @@ fournisseur, le modèle, la version du prompt et la date. Jamais le prompt compl
 données, les textes envoyés ni la réponse brute. Régénérer la même période remplace le bilan.
 Les bilans figurent dans l'export JSON (`ai`) et, sur option, dans le rapport PDF ; ils sont
 supprimés avec le compte.
+
+## Diagnostic
+
+- `GET /api/health` → `ai: { configured, keyFormat, model }` : clé présente ? format attendu
+  (`sk-ant-`) ? modèle utilisé. Jamais la clé. Guillemets et espaces autour des valeurs retirés.
+- Journaux serveur (codes techniques seulement) : `[ai] bilan` (statut HTTP, `error_type`,
+  message d'erreur de l'API, `request_id`, jetons), `[ai] bilan non obtenu` (refus, délai, erreur),
+  `[ai] bilan refusé par les garde-fous` (code du motif), `[ai] bilan filtré` (nombre retiré).
+- Les modèles Haiku n'acceptent pas le paramètre `effort` : il n'est envoyé qu'aux autres modèles.
 
 ## Configuration en production (Hostinger)
 

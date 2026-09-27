@@ -47,11 +47,17 @@ export async function generateWeeklyInsight(input: {
   for (let attempt = 0; attempt < 2; attempt += 1) {
     const outcome = await input.provider.generateWeeklyReflection(dataset);
     if (!outcome.ok) {
+      console.warn("[ai] bilan non obtenu", { attempt: attempt + 1, reason: outcome.reason });
       if (outcome.reason === "invalid_output") continue;
       return { ok: false, reason: "provider" };
     }
     const validated = validateWeeklyReflection(outcome.output, dataset);
-    if (validated.ok) return { ok: true, reflection: validated.reflection, dataset };
+    // Codes techniques seulement (jamais le texte du bilan).
+    if (validated.ok) {
+      if (validated.removed > 0) console.info("[ai] bilan filtré", { removed: validated.removed });
+      return { ok: true, reflection: validated.reflection, dataset };
+    }
+    console.warn("[ai] bilan refusé par les garde-fous", { attempt: attempt + 1, reason: validated.reason });
   }
   return { ok: false, reason: "invalid_output" };
 }

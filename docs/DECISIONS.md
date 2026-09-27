@@ -1030,7 +1030,9 @@ acceptée : on en ajoute une nouvelle qui la remplace (statut « Remplacée par 
 
 - **Decision** : aucune sortie n'est enregistrée sans passer `validateWeeklyReflection` : schéma
   strict, `evidence_keys` présentes dans le jeu envoyé, vocabulaire interdit absent (diagnostic,
-  prédiction, causalité, jugement, injonction). Une seule nouvelle tentative. Pas de chatbot.
+  prédiction, causalité, jugement, injonction). Une observation ou question non conforme est
+  retirée (jamais réécrite) ; résumé non conforme ou moins de 2 questions → sortie refusée, une
+  seule nouvelle tentative. Pas de chatbot.
 
 ## ADR-087 — Seul le résultat validé est conservé ; une période = un bilan
 
