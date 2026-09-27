@@ -63,7 +63,7 @@ plusieurs substances (alcool, cannabis, nicotine, stimulants, opioïdes, autres)
 | 10 | PWA et notifications | ⏸ Reporté (après le Sprint 11) |
 | 11 | Sécurité, confidentialité, export et suppression | ✅ Terminé |
 | 12 | Bilans intelligents (IA opt-in), rapport PDF, correction des accomplissements | ✅ Terminé |
-| 13 | Préparation de la bêta V1 (tests, corrections, avis bêta) | ✅ Terminé — voir `docs/BETA_CHECKLIST.md` |
+| 13 | Préparation de la bêta V1 (tests, corrections, avis bêta) | ✅ Terminé — **Bêta V1 prête** (`docs/BETA_CHECKLIST.md`) |
 
 ### Sprint 12 — réalisé
 

@@ -8,7 +8,7 @@ cassé) · **P2** mineur (formulation, espacement, petit problème d'UX).
 
 | # | Priorité | Anomalie | Correction |
 | --- | --- | --- | --- |
-| ISSUE-01 | **P0** | En production, `/auth/callback` redirigeait vers `https://0.0.0.0:3000/...` (adresse interne du serveur) : réinitialisation du mot de passe et changement de courriel inutilisables | Redirections construites depuis `NEXT_PUBLIC_SITE_URL` (`resolveRedirectOrigin`, testée). **À déployer.** |
+| ISSUE-01 | **P0** | En production, `/auth/callback` redirigeait vers `https://0.0.0.0:3000/...` (adresse interne du serveur) : réinitialisation du mot de passe et changement de courriel inutilisables | Redirections construites depuis `NEXT_PUBLIC_SITE_URL` (`resolveRedirectOrigin`, testée). Déployé et vérifié en production. |
 | ISSUE-02 | P1 | Le CDN de Hostinger remplace l'en-tête `Content-Security-Policy` par `upgrade-insecure-requests` | Même politique ajoutée en balise `<meta http-equiv>` (appliquée en plus par le navigateur) ; `frame-ancestors` couvert par `X-Frame-Options: DENY` |
 | ISSUE-05 | P2 | Courriel déjà utilisé : « Réessaie dans quelques instants » (impasse) | Message générique qui oriente vers la connexion / « Mot de passe oublié » |
 | ISSUE-06 | P1 | Check-in : un texte tapé sur l'étape en cours était perdu en cas de rechargement ou de fermeture (sauvegarde seulement sur « Continuer ») | Sauvegarde automatique du brouillon 1,5 s après la dernière saisie |
@@ -23,7 +23,7 @@ cassé) · **P2** mineur (formulation, espacement, petit problème d'UX).
 
 | # | Priorité | Anomalie | Action |
 | --- | --- | --- | --- |
-| ISSUE-03 | **BLOCKED** (P1 si non conforme) | Flux par courriel (mot de passe oublié, changement de courriel) non testables de bout en bout : aucune boîte de test, Supabase refuse les adresses example.com. Le service d'envoi intégré de Supabase est très limité (volume, destinataires) | Propriétaire : vérifier **Site URL** et **Redirect URLs** (`https://darkblue-alligator-779650.hostingersite.com` et `/auth/callback`), configurer un **SMTP personnalisé** si nécessaire, puis faire un vrai « Mot de passe oublié » avec sa propre adresse **après déploiement** du correctif ISSUE-01 |
+| ISSUE-03 | Résolu | Flux par courriel (mot de passe oublié, changement de courriel) non testables de bout en bout : aucune boîte de test, Supabase refuse les adresses example.com. Le service d'envoi intégré de Supabase est très limité (volume, destinataires) | Propriétaire : vérifier **Site URL** et **Redirect URLs** (`https://darkblue-alligator-779650.hostingersite.com` et `/auth/callback`), configurer un **SMTP personnalisé** si nécessaire, puis faire un vrai « Mot de passe oublié » avec sa propre adresse **après déploiement** du correctif ISSUE-01 — **fait : configuration vérifiée et réinitialisation validée en production** |
 | ISSUE-04 | P2 (décision) | La confirmation du courriel est désactivée dans Supabase : une faute de frappe dans l'adresse rend la récupération du compte impossible | Décision du propriétaire ; si activée, les courriels dépendent aussi d'ISSUE-03 |
 | ISSUE-09 | P2 | Tableau de bord : les jours précédant le début du parcours sont comptés « non documentés » dans la semaine d'un nouveau compte (le calendrier affiche bien « Avant ton parcours ») | Harmoniser avec le calendrier après la bêta |
 | ISSUE-12 | P2 | Boutons secondaires de 36 px de haut (sélecteurs de période, liens « Voir… ») sous les 44 px recommandés ; actions principales à 44–48 px | Polissage après retours |

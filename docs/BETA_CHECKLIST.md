@@ -5,6 +5,8 @@ sans action externe) · **NOT TESTED** (non testé). Tests du 27 septembre 2026 
 production local (`next start`, Supabase distant réel) et sur l'URL Hostinger (lecture seule),
 avec des comptes **fictifs** uniquement (tous supprimés ensuite).
 
+**Verdict : BETA V1 READY** (27 septembre 2026) — correctifs déployés, Supabase (Site URL, Redirect URLs) et réinitialisation du mot de passe validés en production par le propriétaire.
+
 Détails des anomalies : [BETA_ISSUES.md](./BETA_ISSUES.md). Plan de test bêta : [BETA_TEST_PLAN.md](./BETA_TEST_PLAN.md).
 
 ## Infrastructure
@@ -16,7 +18,7 @@ Détails des anomalies : [BETA_ISSUES.md](./BETA_ISSUES.md). Plan de test bêta 
 | Hostinger : HTTPS, redirection http → https | PASS | 301 vers https |
 | Hostinger : variables (Supabase, URL du site, clé IA) | PASS | `/api/health` : tout « ok », `keyFormat: ok` |
 | Hostinger : routes protégées → `/login?next=…` | PASS | `/today`, `/settings`, `/reports/personal`, `/insights` |
-| Hostinger : callback d'authentification | FAIL → corrigé (à déployer) | redirigeait vers `https://0.0.0.0:3000` (ISSUE-01) |
+| Hostinger : callback d'authentification | PASS | corrigé (ISSUE-01), déployé et vérifié : redirection vers le domaine bêta |
 | Hostinger : en-têtes de sécurité | PASS avec réserve | CSP remplacée par le CDN → CSP ajoutée en balise meta (ISSUE-02) |
 | Version de Node sur Hostinger | NOT TESTED | non visible depuis l'extérieur (vérifier dans hPanel ≥ 20.9) |
 
@@ -31,8 +33,8 @@ Détails des anomalies : [BETA_ISSUES.md](./BETA_ISSUES.md). Plan de test bêta 
 | Première connexion → onboarding | PASS | |
 | Connexion : mauvais mot de passe, `?next=` | PASS | message générique, retour à la page demandée |
 | Déconnexion | PASS | session effacée, routes protégées → login |
-| Mot de passe oublié (courriel → callback → réinitialisation) | BLOCKED | aucune boîte courriel de test ; Supabase refuse example.com (ISSUE-03) |
-| Changement de courriel | BLOCKED | même raison (ISSUE-03) |
+| Mot de passe oublié (courriel → callback → réinitialisation) | PASS | validé par le propriétaire en production avec sa propre adresse (ISSUE-03) |
+| Changement de courriel | NOT TESTED | même mécanisme que la réinitialisation (courriel + callback corrigé) |
 | Lien invalide / expiré → `/login?error=link_invalid` | PASS | message clair |
 
 ## Onboarding
@@ -197,4 +199,5 @@ Détails des anomalies : [BETA_ISSUES.md](./BETA_ISSUES.md). Plan de test bêta 
 | Élément | Statut | Détail |
 | --- | --- | --- |
 | « Donner mon avis » (menu, barre latérale, Paramètres) | PASS | formulaire interne, table `beta_feedback` sous RLS |
+| Notification des avis par courriel (Resend) | PASS | validée par le propriétaire en production |
 | Aucune capture ni copie automatique du journal | PASS | |
