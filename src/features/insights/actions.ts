@@ -6,9 +6,9 @@ import { z } from "zod";
 import { routes } from "@/config/routes";
 import { getConfiguredAiProvider } from "@/lib/ai/anthropic-provider";
 import { PROMPT_VERSION } from "@/lib/ai/prompts";
-import { checkWeeklyInsightPreconditions, generateWeeklyInsight, getWeeklyPeriod, isRefundableFailure } from "@/lib/ai/weekly";
+import { checkWeeklyInsightPreconditions, generateWeeklyInsight, getNextGenerationAt, getWeeklyPeriod, isRefundableFailure } from "@/lib/ai/weekly";
 import { getCurrentUser } from "@/lib/auth/session";
-import { getUserToday } from "@/lib/dates";
+import { formatDateTimeInZone, getUserToday } from "@/lib/dates";
 import {
   collectWeeklyInsightSource,
   deleteAiReflection,
@@ -32,7 +32,12 @@ export type InsightActionState = { status: "ok"; message?: string } | { status: 
 const SESSION_EXPIRED: InsightActionState = { status: "error", message: "Ta session a expiré. Reconnecte-toi pour continuer." };
 const GENERATION_ERROR = "Impossible de générer ton bilan pour le moment. Tes données n'ont pas été modifiées.";
 const GENERATION_NOT_COUNTED =
-  "Impossible de générer ton bilan pour le moment. Cet essai n'est pas compté dans ta limite quotidienne, et tes données n'ont pas été modifiées.";
+  "Impossible de générer ton bilan pour le moment. Cet essai n'est pas compté dans ta limite d'un bilan par 24 heures, et tes données n'ont pas été modifiées.";
+
+function rateLimitMessage(next: Date | null, timezone: string | null | undefined): string {
+  const base = "Tu peux créer un bilan par période de 24 heures.";
+  return next ? `${base} Le prochain sera possible ${formatDateTimeInZone(next, timezone)}.` : `${base} Réessaie un peu plus tard.`;
+}
 
 function revalidate() {
   revalidatePath(routes.insights);
@@ -75,7 +80,8 @@ export async function generateWeeklyInsightAction(): Promise<InsightActionState>
 
   const preferences = await getAiPreferences(user.id);
   const provider = getConfiguredAiProvider();
-  const today = getUserToday((await getCurrentProfile())?.timezone);
+  const timezone = (await getCurrentProfile())?.timezone;
+  const today = getUserToday(timezone);
   const period = getWeeklyPeriod(today);
 
   let source;
@@ -96,7 +102,8 @@ export async function generateWeeklyInsightAction(): Promise<InsightActionState>
   const reserved = await reserveAiGeneration();
   if (!reserved.ok) {
     if (reserved.reason === "rate_limited") {
-      return { status: "error", message: "Tu as atteint la limite de 3 bilans pour aujourd'hui. Réessaie demain." };
+      const next = getNextGenerationAt((await getAiPreferences(user.id)).lastGenerationAt);
+      return { status: "error", message: rateLimitMessage(next, timezone) };
     }
     return { status: "error", message: reserved.reason === "consent" ? "Active d'abord les bilans intelligents." : GENERATION_ERROR };
   }

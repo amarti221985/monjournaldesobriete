@@ -20,13 +20,14 @@ export const DEFAULT_AI_PREFERENCES: AiPreferences = {
   includeCravingContext: false,
   consentedAt: null,
   consentVersion: null,
+  lastGenerationAt: null,
 };
 
 export async function getAiPreferences(userId: string): Promise<AiPreferences> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("ai_preferences")
-    .select("ai_enabled, include_reflections, include_consumption_context, include_craving_context, consented_at, consent_version")
+    .select("ai_enabled, include_reflections, include_consumption_context, include_craving_context, consented_at, consent_version, last_generation_at")
     .eq("user_id", userId)
     .maybeSingle();
   if (error) {
@@ -42,6 +43,7 @@ export async function getAiPreferences(userId: string): Promise<AiPreferences> {
     includeCravingContext: data.include_craving_context,
     consentedAt: data.consented_at,
     consentVersion: data.consent_version,
+    lastGenerationAt: data.last_generation_at,
   };
 }
 
@@ -120,7 +122,7 @@ export async function listAiReflections(userId: string, limit = 12): Promise<AiR
 /** `reservation` : jeton secret de libération, gardé côté serveur (jamais renvoyé au navigateur). */
 export type ReserveResult = { ok: true; remaining: number; reservation: string } | { ok: false; reason: "consent" | "rate_limited" | "error" };
 
-/** Réserve une génération (consentement actif, 3 / jour) AVANT l'appel au fournisseur. */
+/** Réserve LA génération de la fenêtre de 24 h (consentement actif) AVANT l'appel au fournisseur. */
 export async function reserveAiGeneration(): Promise<ReserveResult> {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("reserve_ai_generation");

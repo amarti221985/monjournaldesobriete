@@ -1,6 +1,6 @@
 -- =============================================================================
--- Vérification des bilans intelligents (Sprint 12) : consentement obligatoire, limite
--- de 3 générations par jour, compteur non modifiable, écriture uniquement par RPC,
+-- Vérification des bilans intelligents (Sprint 12) : consentement obligatoire, un bilan
+-- par période glissante de 24 heures, date de génération non modifiable, écriture uniquement par RPC,
 -- remplacement d'une période, libération d'un essai (jeton serveur), désactivation, isolation A/B et suppression en cascade.
 --
 -- Usage :
@@ -61,44 +61,48 @@ begin
   begin perform public.reserve_ai_generation(); exception when others then v_error := sqlerrm; end;
   if v_error is distinct from 'ai_consent_required' then raise exception 'ÉCHEC 4 : réservation IA désactivée (%)', v_error; end if;
 
-  -- 5. Compteur de générations : jamais modifiable par le client
+  -- 5. Date de dernière génération : jamais modifiable par le client
   begin
-    update public.ai_preferences set generations_count = 0 where user_id = user_a;
-    raise exception 'ÉCHEC 5 : compteur modifiable';
+    update public.ai_preferences set last_generation_at = null where user_id = user_a;
+    raise exception 'ÉCHEC 5 : date de génération modifiable';
   exception when insufficient_privilege then null;
   end;
   begin
-    update public.ai_preferences set generations_date = null where user_id = user_a;
-    raise exception 'ÉCHEC 5 : date du compteur modifiable';
+    insert into public.ai_preferences (user_id, last_generation_at) values (user_b, null);
+    raise exception 'ÉCHEC 5 : date de génération insérable';
   exception when insufficient_privilege then null;
   end;
 
-  -- 6. Activation avec consentement : 3 réservations, la 4e est refusée
+  -- 6. Activation avec consentement : une réservation, la 2e dans les 24 h est refusée
   update public.ai_preferences set ai_enabled = true, consented_at = now(), consent_version = '1' where user_id = user_a;
-  for i in 1..3 loop
-    select remaining into v_remaining from public.reserve_ai_generation();
-    if v_remaining <> 3 - i then raise exception 'ÉCHEC 6 : % restante(s) après % réservation(s)', v_remaining, i; end if;
-  end loop;
+  select remaining into v_remaining from public.reserve_ai_generation();
+  if v_remaining <> 0 then raise exception 'ÉCHEC 6 : % restante(s)', v_remaining; end if;
   v_error := null;
   begin perform public.reserve_ai_generation(); exception when others then v_error := sqlerrm; end;
-  if v_error is distinct from 'ai_rate_limited' then raise exception 'ÉCHEC 7 : 4e génération (%)', v_error; end if;
+  if v_error is distinct from 'ai_rate_limited' then raise exception 'ÉCHEC 7 : 2e génération dans les 24 h (%)', v_error; end if;
 
-  -- 8. Le compteur repart à zéro le jour suivant (simulé côté propriétaire de la base)
+  -- 8. Fenêtre glissante : refus après 23 h, accepté après 25 h (simulé côté propriétaire)
   perform set_config('role', 'postgres', true);
-  update public.ai_preferences set generations_date = v_today - 1 where user_id = user_a;
+  update public.ai_preferences set last_generation_at = now() - interval '23 hours' where user_id = user_a;
+  perform set_config('role', 'authenticated', true);
+  v_error := null;
+  begin perform public.reserve_ai_generation(); exception when others then v_error := sqlerrm; end;
+  if v_error is distinct from 'ai_rate_limited' then raise exception 'ÉCHEC 8 : accepté après 23 h (%)', v_error; end if;
+  perform set_config('role', 'postgres', true);
+  update public.ai_preferences set last_generation_at = now() - interval '25 hours' where user_id = user_a;
   perform set_config('role', 'authenticated', true);
   select remaining, reservation into v_remaining, v_token from public.reserve_ai_generation();
-  if v_remaining <> 2 then raise exception 'ÉCHEC 8 : compteur non réinitialisé'; end if;
 
-  -- 21. Libération avec un mauvais jeton : refusée, compteur inchangé
+  -- 21. Libération avec un mauvais jeton : refusée, fenêtre inchangée
   if public.release_ai_generation(gen_random_uuid()) then raise exception 'ÉCHEC 21 : libération sans le bon jeton'; end if;
-  select generations_count into v_count from public.ai_preferences where user_id = user_a;
-  if v_count <> 1 then raise exception 'ÉCHEC 21 : compteur modifié (%)', v_count; end if;
+  select count(*) into v_count from public.ai_preferences where user_id = user_a and last_generation_at > now() - interval '1 minute';
+  if v_count <> 1 then raise exception 'ÉCHEC 21 : fenêtre modifiée'; end if;
 
-  -- 22. Libération avec le jeton de la réservation : compteur rendu, une seule fois
+  -- 22. Libération avec le jeton : la date précédente est restaurée, une seule fois
   v_ok := public.release_ai_generation(v_token);
-  select generations_count into v_count from public.ai_preferences where user_id = user_a;
-  if not v_ok or v_count <> 0 then raise exception 'ÉCHEC 22 : libération (% / %)', v_ok, v_count; end if;
+  select count(*) into v_count from public.ai_preferences
+   where user_id = user_a and last_generation_at between now() - interval '26 hours' and now() - interval '24 hours';
+  if not v_ok or v_count <> 1 then raise exception 'ÉCHEC 22 : libération (% / %)', v_ok, v_count; end if;
   if public.release_ai_generation(v_token) then raise exception 'ÉCHEC 22 : double libération'; end if;
 
   -- 23. Les jetons de réservation ne sont lisibles par aucun client

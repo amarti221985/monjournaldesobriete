@@ -7,7 +7,7 @@ import { AI_LIMITS, truncateForAi, type AiPreferences } from "@/lib/ai/privacy";
 import { buildWeeklyReflectionUserMessage, WEEKLY_REFLECTION_SYSTEM_PROMPT } from "@/lib/ai/prompts";
 import type { AiProvider, ProviderOutcome } from "@/lib/ai/provider";
 import type { WeeklyReflection } from "@/lib/ai/schemas";
-import { checkWeeklyInsightPreconditions, generateWeeklyInsight, getWeeklyPeriod, isRefundableFailure } from "@/lib/ai/weekly";
+import { checkWeeklyInsightPreconditions, generateWeeklyInsight, getNextGenerationAt, getWeeklyPeriod, isRefundableFailure } from "@/lib/ai/weekly";
 
 /*
  * Bilans intelligents (Sprint 12) : minimisation du jeu de données, garde-fous, flux avec
@@ -21,6 +21,7 @@ const ENABLED: AiPreferences = {
   includeCravingContext: false,
   consentedAt: "2026-09-20T12:00:00Z",
   consentVersion: "1",
+  lastGenerationAt: null,
 };
 
 const SECRET_MARKERS = {
@@ -259,6 +260,13 @@ describe("generateWeeklyInsight — fournisseur simulé", () => {
     const bad = { ...validReflection(), summary: "Cette semaine a été un échec pour toi, clairement." };
     const invalid = await generateWeeklyInsight({ preferences: ENABLED, source: source(), provider: fakeProvider([{ ok: true, output: bad }]) });
     expect(isRefundableFailure(invalid)).toBe(false);
+  });
+
+  it("un bilan par période glissante de 24 heures", () => {
+    const now = new Date("2026-09-27T12:00:00Z");
+    expect(getNextGenerationAt(null, now)).toBeNull();
+    expect(getNextGenerationAt("2026-09-26T11:59:00Z", now)).toBeNull();
+    expect(getNextGenerationAt("2026-09-27T01:22:00Z", now)?.toISOString()).toBe("2026-09-28T01:22:00.000Z");
   });
 
   it("période : 7 journées calendaires, aujourd'hui inclus", () => {

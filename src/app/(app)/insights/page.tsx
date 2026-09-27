@@ -1,4 +1,4 @@
-import { Sprout } from "lucide-react";
+import { Clock, Sprout } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -17,9 +17,9 @@ import {
 import { ReflectionView } from "@/features/insights/components/reflection-view";
 import { getConfiguredAiProvider } from "@/lib/ai/anthropic-provider";
 import { AI_LIMITS } from "@/lib/ai/privacy";
-import { getWeeklyPeriod } from "@/lib/ai/weekly";
+import { getNextGenerationAt, getWeeklyPeriod } from "@/lib/ai/weekly";
 import { requireUser } from "@/lib/auth/session";
-import { formatLocalDate, formatLongDate, getUserToday } from "@/lib/dates";
+import { formatDateTimeInZone, formatLocalDate, formatLongDate, getUserToday } from "@/lib/dates";
 import { getAiPreferences, listAiReflections, type AiReflectionRecord } from "@/lib/services/ai";
 import { getCurrentProfile } from "@/lib/services/profiles";
 import { getProgressDataset } from "@/lib/services/progress";
@@ -38,7 +38,8 @@ const periodLabel = (start: string, end: string) =>
  */
 export default async function InsightsPage() {
   const user = await requireUser(routes.insights);
-  const today = getUserToday((await getCurrentProfile())?.timezone);
+  const timezone = (await getCurrentProfile())?.timezone;
+  const today = getUserToday(timezone);
   const period = getWeeklyPeriod(today);
   const provider = getConfiguredAiProvider();
 
@@ -65,6 +66,7 @@ export default async function InsightsPage() {
 
   const current = reflections.find((item) => item.periodStart === period.start && item.periodEnd === period.end) ?? null;
   const previous = reflections.filter((item) => item !== current);
+  const nextGenerationAt = getNextGenerationAt(preferences.lastGenerationAt);
 
   return (
     <PageContainer>
@@ -115,6 +117,14 @@ export default async function InsightsPage() {
                   <Link href={routes.checkin}>Faire mon check-in</Link>
                 </Button>
               </div>
+            ) : nextGenerationAt ? (
+              <p className="flex items-start gap-2 text-sm text-pretty text-muted-foreground">
+                <Clock className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+                <span>
+                  Tu peux créer un bilan par période de 24 heures. Le prochain sera possible{" "}
+                  {formatDateTimeInZone(nextGenerationAt, timezone)}.
+                </span>
+              </p>
             ) : provider ? (
               <GenerateReflectionButton regenerate={Boolean(current)} />
             ) : null}

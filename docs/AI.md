@@ -34,7 +34,7 @@ système de prédiction. Décisions : ADR-082 à ADR-087 (`docs/DECISIONS.md`).
 
 Pipeline (`src/features/insights/actions.ts`) : session → préférences → fournisseur configuré →
 période → lecture des seules données autorisées (`collectWeeklyInsightSource`) → contrôles
-préalables (sans consommer de génération) → réservation (3 / jour) → **minimisation**
+préalables (sans consommer de génération) → réservation (1 bilan / 24 h) → **minimisation**
 (`buildWeeklyInsightDataset`, fonction pure testée) → appel → validation → persistance.
 
 Toujours inclus (catalogues, dates, nombres calculés **par le code**) :
@@ -92,8 +92,10 @@ unitaires (marqueurs fictifs) et par un test d'intégration qui capture la requ�
 
 ## Limites et coûts
 
-- 3 générations par jour et par utilisateur (journée UTC), appliquées par la base
-  (`reserve_ai_generation`, compteur non modifiable par le client). La réservation a lieu **avant**
+- **Un bilan par période glissante de 24 heures** (à partir de l'heure de la dernière génération),
+  appliqué par la base (`reserve_ai_generation`, `ai_preferences.last_generation_at` non modifiable
+  par le client). `/insights` affiche alors l'heure du prochain bilan possible (fuseau du profil)
+  au lieu du bouton ; régénérer est soumis à la même règle. La réservation a lieu **avant**
   l'appel. Un échec extérieur au contenu (clé refusée, crédits, service indisponible, délai) est
   **rendu** par `release_ai_generation(jeton)` : le jeton secret est créé à la réservation, stocké
   dans `ai_generation_reservations` (aucun droit client) et connu seulement de la Server Action ;

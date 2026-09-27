@@ -107,6 +107,17 @@ export function formatLocalDate(date: string, options: Intl.DateTimeFormatOption
   return new Intl.DateTimeFormat("fr-CA", { ...options, timeZone: "UTC" }).format(new Date(`${date}T00:00:00Z`));
 }
 
+/** Horodatage affiché dans le fuseau de l'utilisateur, ex. « lundi 28 septembre à 01 h 22 ». */
+export function formatDateTimeInZone(timestamp: Date, timeZone: string | null | undefined): string {
+  const format = (zone: string | undefined) =>
+    new Intl.DateTimeFormat("fr-CA", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", timeZone: zone }).format(timestamp);
+  try {
+    return format(timeZone ?? undefined);
+  } catch {
+    return format(undefined);
+  }
+}
+
 /*
  * Mois métier « YYYY-MM » (calendrier). Calculs calendaires purs, sans fuseau :
  * « aujourd'hui » vient toujours de getUserToday(profiles.timezone).

@@ -320,18 +320,20 @@ suppression non authentifiée refusée ; suppression de A : 0 ligne restante, B 
 
 | Table | Rôle | Droits du client |
 | --- | --- | --- |
-| `ai_preferences` | Une ligne par utilisateur (PK `user_id` → `auth.users` CASCADE) : `ai_enabled` (défaut false), catégories (`include_reflections` true, `include_consumption_context` / `include_craving_context` false), `consented_at`, `consent_version`, `revoked_at`, compteur `generations_date` / `generations_count` | select ; insert / update des préférences seulement (jamais le compteur) |
+| `ai_preferences` | Une ligne par utilisateur (PK `user_id` → `auth.users` CASCADE) : `ai_enabled` (défaut false), catégories (`include_reflections` true, `include_consumption_context` / `include_craving_context` false), `consented_at`, `consent_version`, `revoked_at`, `last_generation_at` (fenêtre de 24 h) | select ; insert / update des préférences seulement (jamais `last_generation_at`) |
 | `ai_reflections` | Bilans validés : `period_start`, `period_end` (≤ 31 j), `type` 'weekly', `summary` (≤ 1200), `content` jsonb objet (≤ 32 Ko), `provider`, `model`, `prompt_version`, `generated_at` ; unique `(user_id, type, period_start, period_end)` | select, delete |
 
 Contrainte : `ai_enabled` exige `consented_at` et `consent_version`. RPC SECURITY DEFINER sans
 paramètre d'utilisateur (`auth.uid()`, `search_path = ''`) : `reserve_ai_generation()`
-(consentement actif, 3 / journée UTC, renvoie le nombre restant ; erreurs `ai_consent_required`,
+(consentement actif, un bilan par 24 heures glissantes ; erreurs `ai_consent_required`,
 `ai_rate_limited`) et `save_ai_reflection(...)` (consentement actif, upsert par période).
 Jamais de prompt, de jeu de données ni de réponse brute en base.
 
 Migration `20261003090000_ai_generation_release.sql` : `reserve_ai_generation()` renvoie
 `(remaining, reservation)` ; `release_ai_generation(p_reservation uuid)` rend l'essai (même jour
-UTC, une seule fois) si le jeton correspond. Table interne `ai_generation_reservations` (PK
+une seule fois) si le jeton correspond. Migration `20261004090000_ai_generation_cooldown.sql` : un bilan par 24 heures glissantes
+(`last_generation_at`, repris du dernier bilan existant) ; l'ancien compteur quotidien est supprimé ;
+une libération restaure la date précédente. Table interne `ai_generation_reservations` (PK
 `user_id` → `auth.users` CASCADE, RLS sans policy, aucun droit client).
 
 ### Vérifier les bilans intelligents
@@ -342,7 +344,7 @@ npx supabase db query --linked -f supabase/tests/ai_rls.sql
 
 Résultat attendu : `RLS_OK — ai : 24 vérifications réussies` (libération : mauvais jeton refusé,
 bon jeton une seule fois, jetons illisibles par les clients ; consentement requis, activation sans
-consentement refusée, compteur non modifiable, 3 / jour puis refus, remise à zéro le lendemain,
+consentement refusée, date de génération non modifiable, 2e bilan refusé dans les 24 h (et à 23 h), accepté après 24 h,
 écriture directe refusée, régénération qui remplace, contraintes de forme, isolation A/B, RPC non
 exécutables par `anon`, désactivation qui conserve les bilans, suppression en cascade).
 

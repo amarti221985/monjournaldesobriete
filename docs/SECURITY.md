@@ -129,10 +129,10 @@ personnelles ni dans `auth.users`, l'autre utilisateur intact.
 ## 7 bis. Bilans intelligents et rapport PDF (Sprint 12)
 
 - `ai_preferences` : RLS propriétaire ; droits de colonnes (insert / update des préférences
-  seulement, jamais `generations_count` / `generations_date`). `ai_reflections` : lecture et
+  seulement, jamais `last_generation_at`). `ai_reflections` : lecture et
   suppression seulement ; écriture par `save_ai_reflection()`.
 - `reserve_ai_generation()` / `save_ai_reflection()` : SECURITY DEFINER sans paramètre
-  d'utilisateur (`auth.uid()`), `search_path = ''`, consentement actif exigé, 3 générations / jour,
+  d'utilisateur (`auth.uid()`), `search_path = ''`, consentement actif exigé, un bilan par 24 heures glissantes,
   non exécutables par `anon`. `release_ai_generation(jeton)` rend un essai échoué côté fournisseur ;
   jeton secret gardé côté serveur, table `ai_generation_reservations` sans aucun droit client.
   Tests : `supabase/tests/ai_rls.sql` (24 vérifications).

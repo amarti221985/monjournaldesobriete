@@ -18,6 +18,8 @@ export type AiPreferences = {
   includeCravingContext: boolean;
   consentedAt: string | null;
   consentVersion: string | null;
+  /** Dernière génération réservée (fenêtre de 24 h, appliquée par la base) */
+  lastGenerationAt: string | null;
 };
 
 /** Jamais envoyées au fournisseur, même avec consentement (documenté dans docs/AI.md). */
@@ -47,8 +49,8 @@ export const AI_LIMITS = {
   maxFrequencyItems: 5,
   /** Moments d'envie retenus au maximum */
   maxCravings: 10,
-  /** Générations par jour et par utilisateur (appliqué par la base) */
-  generationsPerDay: 3,
+  /** Un bilan par période glissante de N heures (appliqué par la base) */
+  generationCooldownHours: 24,
 } as const;
 
 /**

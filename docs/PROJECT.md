@@ -70,7 +70,7 @@ plusieurs substances (alcool, cannabis, nicotine, stimulants, opioïdes, autres)
   `/reports/personal`, période et sections au choix, PDF produit par le navigateur, sans service
   tiers ni stockage (`docs/PDF_EXPORT.md`).
 - **Bilans intelligents** `/insights` : opt-in, minimisation, garde-fous, historique, limite de
-  3 / jour (`docs/AI.md`). Nécessite `ANTHROPIC_API_KEY` côté serveur.
+  un bilan par 24 heures (`docs/AI.md`). Nécessite `ANTHROPIC_API_KEY` côté serveur.
 - **Accomplissements** : plus aucune attribution pendant le rendu (ADR-089).
 - Export JSON v2 (bilans IA inclus).
 

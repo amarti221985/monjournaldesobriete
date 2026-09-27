@@ -91,20 +91,20 @@ export type Database = {
       }
       ai_generation_reservations: {
         Row: {
+          previous_generation_at: string | null
           reserved_at: string
-          reserved_on: string
           token: string
           user_id: string
         }
         Insert: {
+          previous_generation_at?: string | null
           reserved_at?: string
-          reserved_on: string
           token: string
           user_id: string
         }
         Update: {
+          previous_generation_at?: string | null
           reserved_at?: string
-          reserved_on?: string
           token?: string
           user_id?: string
         }
@@ -116,11 +116,10 @@ export type Database = {
           consent_version: string | null
           consented_at: string | null
           created_at: string
-          generations_count: number
-          generations_date: string | null
           include_consumption_context: boolean
           include_craving_context: boolean
           include_reflections: boolean
+          last_generation_at: string | null
           revoked_at: string | null
           updated_at: string
           user_id: string
@@ -130,11 +129,10 @@ export type Database = {
           consent_version?: string | null
           consented_at?: string | null
           created_at?: string
-          generations_count?: number
-          generations_date?: string | null
           include_consumption_context?: boolean
           include_craving_context?: boolean
           include_reflections?: boolean
+          last_generation_at?: string | null
           revoked_at?: string | null
           updated_at?: string
           user_id: string
@@ -144,11 +142,10 @@ export type Database = {
           consent_version?: string | null
           consented_at?: string | null
           created_at?: string
-          generations_count?: number
-          generations_date?: string | null
           include_consumption_context?: boolean
           include_craving_context?: boolean
           include_reflections?: boolean
+          last_generation_at?: string | null
           revoked_at?: string | null
           updated_at?: string
           user_id?: string

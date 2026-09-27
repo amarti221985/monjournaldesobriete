@@ -10,6 +10,16 @@ import { addDays } from "@/lib/dates";
  * (injecté) : testable avec un fournisseur simulé. Ne persiste rien.
  */
 
+/**
+ * Moment à partir duquel un nouveau bilan est possible (fenêtre glissante de 24 h depuis la
+ * dernière génération), ou null s'il est possible maintenant. La base applique la même règle.
+ */
+export function getNextGenerationAt(lastGenerationAt: string | null, now: Date = new Date()): Date | null {
+  if (!lastGenerationAt) return null;
+  const next = new Date(Date.parse(lastGenerationAt) + AI_LIMITS.generationCooldownHours * 3_600_000);
+  return Number.isNaN(next.getTime()) || next <= now ? null : next;
+}
+
 /** Période du bilan : 7 derniers jours calendaires, aujourd'hui inclus (fuseau du profil). */
 export function getWeeklyPeriod(today: string): { start: string; end: string } {
   return { start: addDays(today, -(AI_LIMITS.periodDays - 1)), end: today };

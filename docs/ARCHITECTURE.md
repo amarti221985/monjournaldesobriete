@@ -563,7 +563,7 @@ Détails : [AI.md](./AI.md) et [PDF_EXPORT.md](./PDF_EXPORT.md).
   session → getAiPreferences (consentement) → getConfiguredAiProvider (clé serveur)
   → getWeeklyPeriod(getUserToday) → collectWeeklyInsightSource (catégories autorisées, RLS)
   → checkWeeklyInsightPreconditions (avant toute réservation)
-  → reserve_ai_generation() (3 / jour) → buildWeeklyInsightDataset (pur, minimisé)
+  → reserve_ai_generation() (1 / 24 h) → buildWeeklyInsightDataset (pur, minimisé)
   → AiProvider.generateWeeklyReflection → validateWeeklyReflection (schéma + garde-fous)
   → save_ai_reflection() → revalidatePath
 ```
