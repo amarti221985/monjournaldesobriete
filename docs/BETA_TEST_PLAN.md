@@ -17,7 +17,8 @@ ils ne bloquent pas la bêta).
 3. Tester soi-même « Mot de passe oublié » avec sa propre adresse (courriel reçu, lien vers le
    domaine bêta, nouveau mot de passe accepté). Si le courriel n'arrive pas : configurer un SMTP
    personnalisé (Authentication → Emails → SMTP Settings).
-4. Vérifier `/api/health` (`status: ok`, `ai.keyFormat: ok`) et la limite de dépenses Anthropic.
+4. Vérifier `/api/health` (`status: ok`, `ai.keyFormat: ok`, `feedbackNotifications.configured: true`)
+   et la limite de dépenses Anthropic. Envoyer un avis de test : le courriel doit arriver.
 5. Envoyer l'invitation avec : l'URL, « c'est une bêta », « outil de réflexion, pas un soin »,
    le lien « Donner mon avis » (menu du compte).
 

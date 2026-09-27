@@ -40,6 +40,9 @@ cp .env.example .env.local
 | `NEXT_PUBLIC_SITE_URL` | En production | URL publique de l'app (défaut `http://localhost:3000`). Sert à construire les liens des courriels d'authentification. |
 | `ANTHROPIC_API_KEY` | Non | Clé **serveur** du fournisseur d'IA. Sans elle, les bilans intelligents sont indisponibles et rien n'est envoyé. Jamais `NEXT_PUBLIC_`. |
 | `AI_MODEL` | Non | Modèle utilisé pour les bilans (défaut `claude-opus-5`). |
+| `RESEND_API_KEY` | Non | Clé **serveur** Resend : notification par courriel de chaque avis bêta. |
+| `FEEDBACK_NOTIFY_EMAIL` | Non | Adresse qui reçoit les avis (avec l'expéditeur par défaut : l'adresse du compte Resend). |
+| `FEEDBACK_FROM_EMAIL` | Non | Expéditeur, seulement avec un domaine vérifié dans Resend. |
 
 \* Validées au premier usage d'un client Supabase (`src/lib/env.ts`) : le build et la page
 d'accueil fonctionnent sans elles, mais l'authentification et l'espace personnel affichent

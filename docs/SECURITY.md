@@ -150,6 +150,9 @@ personnelles ni dans `auth.users`, l'autre utilisateur intact.
   `supabase/tests/beta_feedback_rls.sql` (10 vérifications) ; incluse dans `security_rls.sql`.
 - Callback d'authentification : redirections construites depuis `NEXT_PUBLIC_SITE_URL` (ADR-093) ;
   en production, `request.url` contenait l'adresse interne du serveur.
+- Notification d'avis (ADR-097) : `RESEND_API_KEY` serveur seulement (`src/lib/services/notifications.ts`,
+  `server-only`), courriel en texte brut (aucune injection HTML), journaux limités au code HTTP ;
+  un échec n'annule jamais l'avis enregistré.
 - Hostinger : le CDN remplace l'en-tête CSP ; la même politique est livrée en balise meta (ADR-094).
   Les autres en-têtes (`X-Frame-Options`, HSTS, `no-store`, `X-Robots-Tag`) arrivent intacts.
 

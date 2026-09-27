@@ -2,6 +2,7 @@
 
 import { feedbackSchema } from "@/features/feedback/schema";
 import { getCurrentUser } from "@/lib/auth/session";
+import { notifyFeedback } from "@/lib/services/notifications";
 import { createClient } from "@/lib/supabase/server";
 
 export type FeedbackState =
@@ -41,5 +42,7 @@ export async function sendFeedbackAction(input: unknown): Promise<FeedbackState>
     console.error("[feedback] Envoi impossible", { code: error.code });
     return { status: "error", message: "Ton avis n'a pas pu être envoyé. Réessaie dans quelques instants." };
   }
+  // Notification au propriétaire (si Resend est configuré) ; un échec n'annule jamais l'avis.
+  await notifyFeedback(parsed.data);
   return { status: "sent" };
 }

@@ -1104,3 +1104,12 @@ acceptée : on en ajoute une nouvelle qui la remplace (statut « Remplacée par 
   ni un professionnel de la santé ni les services d'urgence (911). Aucun outil d'analytique ni de
   relecture de session : les indicateurs de la bêta sont observés manuellement
   (`docs/BETA_TEST_PLAN.md`).
+
+## ADR-097 — Notification des avis bêta par Resend
+
+- **Decision** : après l'enregistrement d'un avis, le serveur envoie un courriel en texte brut au
+  propriétaire via l'API HTTP de Resend (aucune dépendance ajoutée) : type, section, date, message.
+  Jamais l'adresse ni l'identifiant de la personne (la page d'avis l'annonce). Variables serveur
+  `RESEND_API_KEY`, `FEEDBACK_NOTIFY_EMAIL`, `FEEDBACK_FROM_EMAIL` (facultative ; expéditeur par
+  défaut `onboarding@resend.dev`, qui n'envoie qu'à l'adresse du compte Resend). Sans configuration,
+  rien n'est envoyé et l'avis reste en base. Diagnostic : `/api/health` → `feedbackNotifications`.

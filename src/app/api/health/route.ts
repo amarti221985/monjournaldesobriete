@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { getAiConfigDiagnostics } from "@/lib/ai/anthropic-provider";
+import { getFeedbackNotificationDiagnostics } from "@/lib/services/notifications";
 import { EnvValidationError, getSiteUrl, getSupabaseEnv, getSupabaseEnvDiagnostics } from "@/lib/env";
 
 export const dynamic = "force-dynamic";
@@ -33,7 +34,8 @@ export function GET() {
       siteUrlConfigured,
       variables: getSupabaseEnvDiagnostics(),
       ai: getAiConfigDiagnostics(),
-      revision: 4,
+      feedbackNotifications: getFeedbackNotificationDiagnostics(),
+      revision: 5,
     },
     { status: supabaseConfigured ? 200 : 503, headers: { "Cache-Control": "no-store" } },
   );

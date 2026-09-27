@@ -64,6 +64,9 @@ Aucune donnée stockée sans usage identifiée.
 - **Hostinger** : hébergement de l'application Node.js (Next.js).
 - **Anthropic** (fournisseur d'IA) : seulement si le serveur a une clé configurée, que
   l'utilisateur a activé les bilans intelligents et qu'il demande un bilan (voir ci-dessous).
+- **Resend** (envoi de courriels) : seulement si configuré, pour prévenir le propriétaire d'un avis
+  bêta. Contenu : type, section et message écrits par la personne ; jamais son adresse, son
+  identifiant ni son journal (ADR-097).
 - Aucun autre service : pas d'analytique, de relecture de session, de publicité ni de CDN tiers
   pour les données. Polices servies par l'application.
 

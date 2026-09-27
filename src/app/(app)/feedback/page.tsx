@@ -30,7 +30,8 @@ export default async function FeedbackPage() {
         </CardContent>
       </Card>
       <p className="text-sm text-pretty text-muted-foreground">
-        Seul ce que tu écris ici est envoyé, avec la section choisie. Ton journal n&apos;est jamais joint automatiquement.
+        Seul ce que tu écris ici est transmis, avec le type et la section choisis (enregistré dans l&apos;application et
+        envoyé par courriel à l&apos;équipe). Ton adresse et ton journal ne sont jamais joints automatiquement.
       </p>
     </PageContainer>
   );

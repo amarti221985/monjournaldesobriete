@@ -588,6 +588,7 @@ notifications) **reporté** : aucun service worker ni cache hors ligne.
 | Élément | Emplacement |
 | --- | --- |
 | Avis bêta (page, Server Action, schéma, formulaire) | `src/app/(app)/feedback/`, `src/features/feedback/` |
+| Notification des avis (Resend, texte brut) | `src/features/feedback/notification.ts` (pur), `src/lib/services/notifications.ts` |
 | Badge « Bêta » | `src/components/shared/beta-badge.tsx` (`siteConfig.isBeta`) |
 | Origine des redirections du callback | `resolveRedirectOrigin()` (`src/lib/auth/redirects.ts`) |
 | CSP en balise meta | `metaContentSecurityPolicy` (`src/config/security-headers.ts`), layout racine |
