@@ -122,7 +122,7 @@ personnelles ni dans `auth.users`, l'autre utilisateur intact.
   `lucide-react`, Recharts, Zod, `cn` (paquet officiel shadcn, fusion de classes). Aucun outil
   d'analytique, de relecture de session, de publicité ni d'IA.
 
-## 8. En-têtes HTTP (`next.config.ts`)
+## 8. En-têtes HTTP (`src/config/security-headers.ts`, appliqués par `next.config.ts`)
 
 `Content-Security-Policy` (`default-src 'self'`, `frame-ancestors 'none'`, `object-src 'none'`,
 `base-uri 'self'`, `form-action 'self'`, `connect-src 'self' https://*.supabase.co`),

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { contentSecurityPolicy, securityHeaders } from "../../../next.config";
+import { contentSecurityPolicy, securityHeaders } from "@/config/security-headers";
 import { buildDataExport, EXPORT_VERSION, exportFilename, type ExportSource } from "@/features/settings/export";
 import {
   deleteAccountSchema,
