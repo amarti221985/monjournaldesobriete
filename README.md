@@ -6,7 +6,7 @@ Webapp de journal de sobriété : check-in quotidien, suivi des envies et décle
 réflexions, visualisation de la progression. Outil de journalisation et de suivi personnel —
 il ne remplace pas les conseils ou soins d'un professionnel de la santé.
 
-État : **Sprint 12 — bilans intelligents (IA opt-in) et rapport PDF** (Sprint 10 reporté) (voir [docs/PROJECT.md](docs/PROJECT.md)).
+État : **Sprint 13 — préparation de la bêta V1** (Sprint 10 reporté ; voir [docs/BETA_CHECKLIST.md](docs/BETA_CHECKLIST.md)) (voir [docs/PROJECT.md](docs/PROJECT.md)).
 
 ## Stack
 
@@ -133,4 +133,5 @@ Aucune dépendance à Vercel : l'app est un serveur Node standard.
 - [docs/SECURITY.md](docs/SECURITY.md) / [docs/PRIVACY.md](docs/PRIVACY.md) — sécurité, carte des données
 - [docs/AI.md](docs/AI.md) — bilans intelligents (consentement, minimisation, garde-fous)
 - [docs/PDF_EXPORT.md](docs/PDF_EXPORT.md) — rapport PDF
+- [docs/BETA_CHECKLIST.md](docs/BETA_CHECKLIST.md), [docs/BETA_ISSUES.md](docs/BETA_ISSUES.md), [docs/BETA_TEST_PLAN.md](docs/BETA_TEST_PLAN.md) — bêta V1
 - [docs/MASTER_PROMPT.md](docs/MASTER_PROMPT.md) — cahier des charges maître

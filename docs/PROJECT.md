@@ -63,6 +63,7 @@ plusieurs substances (alcool, cannabis, nicotine, stimulants, opioïdes, autres)
 | 10 | PWA et notifications | ⏸ Reporté (après le Sprint 11) |
 | 11 | Sécurité, confidentialité, export et suppression | ✅ Terminé |
 | 12 | Bilans intelligents (IA opt-in), rapport PDF, correction des accomplissements | ✅ Terminé |
+| 13 | Préparation de la bêta V1 (tests, corrections, avis bêta) | ✅ Terminé — voir `docs/BETA_CHECKLIST.md` |
 
 ### Sprint 12 — réalisé
 
@@ -75,6 +76,17 @@ plusieurs substances (alcool, cannabis, nicotine, stimulants, opioïdes, autres)
 - Export JSON v2 (bilans IA inclus).
 
 Le **Sprint 10** (PWA, notifications) reste **reporté** et n'est pas implémenté.
+
+### Sprint 13 — préparation de la bêta V1
+
+Audit et test complet avec des comptes fictifs (build de production, Supabase réel, Hostinger en
+lecture seule), corrections (callback d'authentification en production, CSP, sauvegarde automatique
+du brouillon, impression du rapport, formulations), avis bêta minimal, documents de bêta :
+[BETA_CHECKLIST.md](./BETA_CHECKLIST.md), [BETA_ISSUES.md](./BETA_ISSUES.md),
+[BETA_TEST_PLAN.md](./BETA_TEST_PLAN.md).
+
+**Pas de Sprint 14** : la suite se décide à partir des retours de la bêta fermée (5 à 10 personnes,
+7 jours).
 
 Règle : chaque sprint implémente **uniquement son périmètre**, sans développer
 prématurément les fonctionnalités futures.

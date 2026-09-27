@@ -55,6 +55,7 @@ export function DeleteAccountSection() {
                 <li>ta progression et tes accomplissements ;</li>
                 <li>ton plan : raisons, stratégies, personnes de soutien, lieux, rappel, lettre ;</li>
                 <li>tes moments d&apos;envie et interventions ;</li>
+                <li>tes bilans intelligents, tes préférences IA et tes avis envoyés pendant la bêta ;</li>
                 <li>ton compte de connexion.</li>
               </ul>
               <p className="text-pretty text-muted-foreground">Aucune restauration ne sera possible ensuite.</p>

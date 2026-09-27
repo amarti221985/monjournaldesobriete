@@ -98,6 +98,18 @@ ou une substance (règle de confidentialité du projet).
 
 `{{ .SiteURL }}` correspond au réglage **Site URL** de l'étape 4.
 
+## 6 bis. Avant la bêta fermée (Sprint 13)
+
+- **URL Configuration** : Site URL = `https://darkblue-alligator-779650.hostingersite.com` et Redirect
+  URLs contenant `https://darkblue-alligator-779650.hostingersite.com/auth/callback`.
+- **Tester « Mot de passe oublié »** avec une vraie adresse du propriétaire : le lien doit ouvrir le
+  domaine bêta (jamais localhost ni `0.0.0.0`, corrigé par ADR-093) puis permettre de choisir un
+  nouveau mot de passe.
+- **SMTP** : si le courriel n'arrive pas (le service intégré est très limité), configurer un SMTP
+  personnalisé avant d'inviter les testeurs.
+- **Confirm email** : actuellement désactivé (session immédiate à l'inscription). Décision du
+  propriétaire (voir `docs/BETA_ISSUES.md`, ISSUE-04).
+
 ## 7. Avant un lancement public
 
 - **SMTP personnalisé** (Authentication → Emails → SMTP Settings) : le service d'envoi

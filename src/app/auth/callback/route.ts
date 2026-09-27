@@ -2,7 +2,8 @@ import type { EmailOtpType } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { routes } from "@/config/routes";
-import { buildLoginUrl, getSafeRedirect } from "@/lib/auth/redirects";
+import { buildLoginUrl, getSafeRedirect, resolveRedirectOrigin } from "@/lib/auth/redirects";
+import { getSiteUrl } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -57,5 +58,12 @@ export async function GET(request: NextRequest) {
   }
 
   const destination = succeeded ? next : `${buildLoginUrl()}?error=link_invalid`;
-  return NextResponse.redirect(new URL(destination, request.url));
+  let siteUrl: URL | null = null;
+  try {
+    siteUrl = getSiteUrl();
+  } catch {
+    siteUrl = null;
+  }
+  // Jamais l'adresse interne du serveur (constat bêta : https://0.0.0.0:3000 chez l'hébergeur).
+  return NextResponse.redirect(new URL(destination, resolveRedirectOrigin(request.url, siteUrl)));
 }

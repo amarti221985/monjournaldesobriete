@@ -71,6 +71,11 @@ export function formatApproxDuration(totalSeconds: number): string {
   return `${hours} h ${String(minutes % 60).padStart(2, "0")}`;
 }
 
+/** Libellé d'une durée mesurée : « moins d'une minute » ou « environ 10 min » (jamais « environ moins… »). */
+export function formatMeasuredDuration(totalSeconds: number): string {
+  return totalSeconds < 60 ? formatApproxDuration(totalSeconds) : `environ ${formatApproxDuration(totalSeconds)}`;
+}
+
 // ---------------------------------------------------------------------------
 // Étape courante (reprise après rafraîchissement)
 // ---------------------------------------------------------------------------

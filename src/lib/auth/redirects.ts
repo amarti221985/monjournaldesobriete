@@ -80,6 +80,19 @@ export function getSafeRedirect(
 }
 
 /** URL de connexion conservant une destination interne sûre. */
+const LOCAL_HOSTNAMES = new Set(["localhost", "127.0.0.1", "0.0.0.0", "[::1]"]);
+
+/**
+ * Origine des redirections absolues d'un Route Handler. Derrière l'hébergeur, `request.url`
+ * peut contenir l'adresse interne du serveur (ex. https://0.0.0.0:3000) : on utilise l'URL
+ * publique configurée (NEXT_PUBLIC_SITE_URL) dès qu'elle n'est pas locale ; sinon (dev),
+ * l'origine de la requête.
+ */
+export function resolveRedirectOrigin(requestUrl: string, siteUrl: URL | null): string {
+  if (siteUrl && !LOCAL_HOSTNAMES.has(siteUrl.hostname)) return siteUrl.origin;
+  return new URL(requestUrl).origin;
+}
+
 export function buildLoginUrl(next?: string): string {
   const safeNext = next ? getSafeRedirect(next, "") : "";
   return safeNext ? `${routes.login}?next=${encodeURIComponent(safeNext)}` : routes.login;

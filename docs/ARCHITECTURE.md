@@ -583,6 +583,19 @@ Accès : menu du compte (« Mes bilans »), bouton sur `/progress`, section « I
 confidentialité » de `/settings`. Rapport : `/settings` → « Mes données » → « Rapport PDF ». Sprint 10 (PWA /
 notifications) **reporté** : aucun service worker ni cache hors ligne.
 
+## Préparation de la bêta V1 (Sprint 13)
+
+| Élément | Emplacement |
+| --- | --- |
+| Avis bêta (page, Server Action, schéma, formulaire) | `src/app/(app)/feedback/`, `src/features/feedback/` |
+| Badge « Bêta » | `src/components/shared/beta-badge.tsx` (`siteConfig.isBeta`) |
+| Origine des redirections du callback | `resolveRedirectOrigin()` (`src/lib/auth/redirects.ts`) |
+| CSP en balise meta | `metaContentSecurityPolicy` (`src/config/security-headers.ts`), layout racine |
+| Sauvegarde automatique du brouillon | `CheckinWizard` (`AUTOSAVE_DELAY_MS`) |
+
+Documents : [BETA_CHECKLIST.md](./BETA_CHECKLIST.md), [BETA_ISSUES.md](./BETA_ISSUES.md),
+[BETA_TEST_PLAN.md](./BETA_TEST_PLAN.md).
+
 ## Conventions de composants
 
 - Fichiers en `kebab-case.tsx`, composants en `PascalCase`, exports nommés (sauf fichiers

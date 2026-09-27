@@ -39,11 +39,11 @@ conformité juridique (voir [PRIVACY.md](./PRIVACY.md)).
   `(parent_id, user_id)` vers le parent : impossible de rattacher une ligne au parent d'un autre
   compte, même avec son UUID. Les références vers `user_substances` sont aussi composites
   (`(user_substance_id, user_id)`), différées au commit (voir §6).
-- Tests : `supabase/tests/security_rls.sql` (A / B sur les 24 tables personnelles : lecture,
+- Tests : `supabase/tests/security_rls.sql` (A / B sur les 25 tables personnelles : lecture,
   modification, suppression, insertion au nom de l'autre, références croisées, RPC avec UUID
   devinés, affectation de masse, dates futures, fuseau, fonctions, suppression du compte) ; tests
   par domaine (`profiles`, `onboarding`, `checkins`, `journal`, `craving`, `plan`,
-  `achievements`, `ai`).
+  `achievements`, `ai`, `beta_feedback`).
 
 ## 3. Fonctions (RPC) et SECURITY DEFINER
 
@@ -141,6 +141,17 @@ personnelles ni dans `auth.users`, l'autre utilisateur intact.
 - Rapport `/reports/personal` : session + onboarding, RLS, `Cache-Control: private, no-store`,
   `X-Robots-Tag: noindex`, jamais la lettre ni les contacts.
 - Aucun accomplissement attribué pendant un rendu GET ou un préchargement (ADR-089).
+
+## 7 ter. Bêta V1 (Sprint 13)
+
+- `beta_feedback` : RLS propriétaire, insertion (colonnes explicites) et lecture seulement, aucune
+  modification ni suppression par le client, section limitée à une liste fermée (jamais une URL),
+  20 avis / 24 h (déclencheur SECURITY DEFINER non exécutable par les clients). Test :
+  `supabase/tests/beta_feedback_rls.sql` (10 vérifications) ; incluse dans `security_rls.sql`.
+- Callback d'authentification : redirections construites depuis `NEXT_PUBLIC_SITE_URL` (ADR-093) ;
+  en production, `request.url` contenait l'adresse interne du serveur.
+- Hostinger : le CDN remplace l'en-tête CSP ; la même politique est livrée en balise meta (ADR-094).
+  Les autres en-têtes (`X-Frame-Options`, HSTS, `no-store`, `X-Robots-Tag`) arrivent intacts.
 
 ## 8. En-têtes HTTP (`src/config/security-headers.ts`, appliqués par `next.config.ts`)
 

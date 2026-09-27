@@ -1,4 +1,4 @@
-import { formatApproxDuration, formatCravingDelta } from "@/features/craving/logic";
+import { formatMeasuredDuration, formatCravingDelta } from "@/features/craving/logic";
 import { addDays, formatLocalDate } from "@/lib/dates";
 import type { CravingEventDetail } from "@/lib/services/craving";
 
@@ -52,7 +52,7 @@ export function CravingHistoryList({
               {event.intervention?.actualSeconds != null ? (
                 <div className="flex gap-1.5">
                   <dt className="text-muted-foreground">Durée :</dt>
-                  <dd>environ {formatApproxDuration(event.intervention.actualSeconds)}</dd>
+                  <dd>{formatMeasuredDuration(event.intervention.actualSeconds)}</dd>
                 </div>
               ) : null}
               {triggers ? (

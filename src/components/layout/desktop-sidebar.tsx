@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { NavLink } from "@/components/layout/nav-link";
+import { BetaBadge } from "@/components/shared/beta-badge";
 import { BrandMark } from "@/components/shared/brand-mark";
 import { Separator } from "@/components/ui/separator";
 import { primaryNavigation, secondaryNavigation } from "@/config/navigation";
@@ -18,6 +19,7 @@ export function DesktopSidebar({ action }: { action?: ReactNode }) {
       >
         <BrandMark className="size-8" />
         <span className="truncate">{siteConfig.shortName}</span>
+        <BetaBadge />
       </Link>
       {action ? <div className="mb-4">{action}</div> : null}
       <nav aria-label="Navigation principale" className="flex flex-1 flex-col">

@@ -75,8 +75,8 @@ export default async function InsightsPage() {
       {!provider ? (
         <Card size="sm">
           <CardContent className="text-sm text-pretty text-muted-foreground">
-            Les bilans intelligents ne sont pas encore disponibles sur ce serveur : aucun service d&apos;IA n&apos;est configuré.
-            Aucune donnée n&apos;est envoyée.
+            Les bilans intelligents ne sont pas disponibles pour le moment. Aucune donnée n&apos;est envoyée, et le reste
+            de ton journal fonctionne normalement.
           </CardContent>
         </Card>
       ) : null}

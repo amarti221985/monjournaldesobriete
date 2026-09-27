@@ -17,6 +17,8 @@ export const routes = {
   personalReport: "/reports/personal",
   // Bilans intelligents (Sprint 12)
   insights: "/insights",
+  // Avis des bêta-testeurs (Sprint 13)
+  feedback: "/feedback",
   // Onboarding (Sprint 2)
   onboarding: "/onboarding",
   // Application authentifiée
@@ -49,6 +51,7 @@ export const protectedRoutePrefixes: readonly string[] = [
   routes.craving,
   routes.achievements,
   routes.insights,
+  routes.feedback,
   "/reports",
   routes.plan,
   routes.settings,

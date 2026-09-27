@@ -302,7 +302,7 @@ ne sont jamais lus par les statistiques.
 | références vers `user_substances` (`consumption_events`, `craving_event_substances`) | — | `(user_substance_id, user_id)` | NO ACTION **différée** (supprimées par les cascades avant le commit) |
 | références vers les catalogues | — | `emotions`, `trigger_types`, … | NO ACTION (catalogues jamais supprimés) |
 
-RLS activée sur les 30 tables ; policies `(select auth.uid()) = user_id` (ou `id`) par opération
+RLS activée sur les 32 tables (dont `ai_generation_reservations`, sans aucun droit client) ; policies `(select auth.uid()) = user_id` (ou `id`) par opération
 accordée ; catalogues en lecture seule ; `user_achievements` en lecture seule.
 
 ### Vérifier la sécurité
@@ -311,10 +311,20 @@ accordée ; catalogues en lecture seule ; `user_achievements` en lecture seule.
 npx supabase db query --linked -f supabase/tests/security_rls.sql
 ```
 
-Résultat attendu : `RLS_OK — security : 16 vérifications réussies` (jeu complet sur 24 tables ;
+Résultat attendu : `RLS_OK — security : 16 vérifications réussies` (jeu complet sur 25 tables ;
 lecture, modification, suppression et insertion croisées refusées ; références croisées ; RPC avec
 UUID devinés ; affectation de masse ; dates futures ; 7e substance ; fuseau ; droits des fonctions ;
 suppression non authentifiée refusée ; suppression de A : 0 ligne restante, B intact).
+
+### Avis bêta — migration `20261005090000_create_beta_feedback.sql`
+
+| Table | Rôle | Droits du client |
+| --- | --- | --- |
+| `beta_feedback` | `user_id` → `auth.users` CASCADE, `category` (bug, confusing, suggestion, like), `message` (1–2000), `page_context` (liste fermée de sections ou NULL), `created_at` | select ; insert (user_id, category, message, page_context) |
+
+RLS propriétaire, aucune modification ni suppression par le client ; déclencheur
+`enforce_beta_feedback_rate` (20 avis / 24 h). Test : `supabase/tests/beta_feedback_rls.sql`
+(`RLS_OK — beta_feedback : 10 vérifications réussies`).
 
 ### Bilans intelligents — migration `20261002090000_create_ai_insights.sql`
 

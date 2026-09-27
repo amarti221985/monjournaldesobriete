@@ -21,7 +21,7 @@ import {
 } from "@/features/craving/components/support-panel";
 import {
   describeCravingResult,
-  formatApproxDuration,
+  formatMeasuredDuration,
   formatCravingDelta,
   getCravingChange,
   getCravingPhase,
@@ -170,7 +170,7 @@ export function CravingSession({ event, strategies, contacts, reason, motivation
           {event.intervention?.actualSeconds != null ? (
             <div className="grid gap-0.5">
               <dt className="text-muted-foreground">Durée</dt>
-              <dd className="font-medium">environ {formatApproxDuration(event.intervention.actualSeconds)}</dd>
+              <dd className="font-medium">{formatMeasuredDuration(event.intervention.actualSeconds)}</dd>
             </div>
           ) : null}
         </dl>

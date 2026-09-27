@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Figtree } from "next/font/google";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { metaContentSecurityPolicy } from "@/config/security-headers";
 import { siteConfig } from "@/config/site";
 import { getSiteUrl } from "@/lib/env";
 
@@ -34,6 +35,9 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang={siteConfig.locale} className={`${figtree.variable} h-full antialiased`}>
+      <head>
+        <meta httpEquiv="Content-Security-Policy" content={metaContentSecurityPolicy} />
+      </head>
       <body className="flex min-h-full flex-col">
         <TooltipProvider>{children}</TooltipProvider>
       </body>

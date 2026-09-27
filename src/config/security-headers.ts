@@ -28,6 +28,17 @@ export const contentSecurityPolicy = [
   "worker-src 'self' blob:",
 ].join("; ");
 
+/**
+ * Même politique livrée aussi dans une balise <meta http-equiv> (layout racine) : le CDN de
+ * l'hébergeur remplace l'en-tête Content-Security-Policy par le sien (constat bêta). Le
+ * navigateur applique les deux politiques. `frame-ancestors` n'est pas valide dans une balise
+ * meta : l'en-tête X-Frame-Options: DENY couvre ce cas.
+ */
+export const metaContentSecurityPolicy = contentSecurityPolicy
+  .split("; ")
+  .filter((directive) => !directive.startsWith("frame-ancestors"))
+  .join("; ");
+
 export const securityHeaders: { key: string; value: string }[] = [
   { key: "Content-Security-Policy", value: contentSecurityPolicy },
   { key: "X-Content-Type-Options", value: "nosniff" },

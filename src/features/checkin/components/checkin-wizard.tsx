@@ -61,6 +61,9 @@ type CheckinWizardProps = {
 
 type SaveStatus = "idle" | "saved" | "failed";
 
+/** Sauvegarde automatique du brouillon après une pause de saisie (évite de perdre un texte en cours). */
+const AUTOSAVE_DELAY_MS = 1500;
+
 const stepTitles = Object.fromEntries(checkinSteps.map((step) => [step.id, step.title])) as Record<
   CheckinStepId,
   string
@@ -89,6 +92,7 @@ export function CheckinWizard({
   const headingRef = useRef<HTMLHeadingElement>(null);
   const hasNavigated = useRef(false);
   const pendingErrorFocus = useRef<string | null>(null);
+  const hasUnsavedChanges = useRef(false);
 
   const steps = getCheckinSteps(draft.status);
   const safeIndex = Math.min(stepIndex, steps.length - 1);
@@ -107,7 +111,22 @@ export function CheckinWizard({
     pendingErrorFocus.current = null;
   }, [errors]);
 
+  // Brouillon enregistré après une pause de saisie, sans attendre « Continuer » : un texte en
+  // cours n'est pas perdu si la page est rechargée ou fermée. Jamais en modification ni après
+  // l'envoi (la base refuse de toute façon un brouillon sur un check-in terminé).
+  useEffect(() => {
+    if (mode !== "create" || !draft.status || !hasUnsavedChanges.current || isCompleted || isSubmitting) return;
+    const timer = window.setTimeout(() => {
+      hasUnsavedChanges.current = false;
+      saveCheckinDraftAction(buildCheckinPayload(draft, checkinDate))
+        .then((state) => setSaveStatus(state.status === "saved" ? "saved" : "failed"))
+        .catch(() => setSaveStatus("failed"));
+    }, AUTOSAVE_DELAY_MS);
+    return () => window.clearTimeout(timer);
+  }, [draft, mode, checkinDate, isCompleted, isSubmitting]);
+
   function update(patch: Partial<CheckinDraft>) {
+    hasUnsavedChanges.current = true;
     setDraft((current) => ({ ...current, ...patch }));
     setErrors({});
   }
@@ -139,6 +158,7 @@ export function CheckinWizard({
   /** Brouillon serveur : seulement pour un check-in non terminé (jamais en modification). */
   function persistDraft(nextDraft: CheckinDraft) {
     if (mode !== "create") return;
+    hasUnsavedChanges.current = false;
     saveCheckinDraftAction(buildCheckinPayload(nextDraft, checkinDate))
       .then((state) => setSaveStatus(state.status === "saved" ? "saved" : "failed"))
       .catch(() => setSaveStatus("failed"));

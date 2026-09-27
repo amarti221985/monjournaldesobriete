@@ -1062,3 +1062,45 @@ acceptée : on en ajoute une nouvelle qui la remplace (statut « Remplacée par 
 - **Decision** : `export_version: 2` ajoute `ai` (`preferences` sans compteur, `reflections`
   conservés). Jamais de clé, de prompt ni de réponse brute. Le reste de la structure (ADR-076) est
   inchangé.
+
+## ADR-091 — Avis bêta : formulaire interne minimal
+
+- **Decision** : « Donner mon avis » (menu du compte, barre latérale, Paramètres) ouvre `/feedback` :
+  catégorie (Bug, Je ne comprends pas, Suggestion, Ce que j'aime), message (≤ 2000), section
+  facultative CHOISIE par la personne. Table `beta_feedback` (RLS : insertion et lecture de ses
+  propres avis, aucune modification ni suppression par le client, 20 avis / 24 h, CASCADE). Aucune
+  capture d'écran, aucune copie du journal, aucun outil tiers. Pas de `mailto` : il aurait fallu
+  publier une adresse personnelle. Avis inclus dans l'export JSON.
+
+## ADR-092 — Brouillon du check-in sauvegardé automatiquement
+
+- **Decision** : en création, le brouillon est enregistré 1,5 s après la dernière modification (en
+  plus de « Continuer » et « Enregistrer et quitter »). Jamais en modification ; la base refuse un
+  brouillon sur un check-in terminé (`checkin_already_completed`), donc aucune régression possible
+  d'un check-in terminé. L'onboarding garde la sauvegarde par étape (parcours court).
+
+## ADR-093 — Redirections absolues construites depuis l'URL publique
+
+- **Decision** : derrière l'hébergeur, `request.url` d'un Route Handler contient l'adresse interne
+  (`https://0.0.0.0:3000`). Le callback d'authentification utilise `resolveRedirectOrigin()` :
+  `NEXT_PUBLIC_SITE_URL` dès qu'elle n'est pas locale, sinon l'origine de la requête (dev).
+
+## ADR-094 — CSP livrée aussi en balise meta
+
+- **Decision** : le CDN de Hostinger remplace l'en-tête `Content-Security-Policy`. La même politique
+  (sans `frame-ancestors`, invalide en meta et couvert par `X-Frame-Options: DENY`) est ajoutée
+  dans le `<head>` du layout racine ; le navigateur applique toutes les politiques reçues.
+
+## ADR-095 — Pas de saisie rétroactive pendant la bêta
+
+- **Decision** : ADR-051 est maintenu. Une journée passée sans check-in affiche un état explicatif
+  (non documentée, sans effet sur la série) et renvoie au check-in du jour. La bêta mesurera si
+  l'oubli est fréquent avant de décider (saisie rétroactive ou notifications).
+
+## ADR-096 — Bêta V1 : badge, avertissement, pas d'analytique
+
+- **Decision** : badge discret « Bêta » (barre latérale, page d'accueil ; masqué dans l'en-tête
+  mobile pour ne pas tronquer le nom). Avertissement : outil de suivi et de réflexion, ne remplace
+  ni un professionnel de la santé ni les services d'urgence (911). Aucun outil d'analytique ni de
+  relecture de session : les indicateurs de la bêta sont observés manuellement
+  (`docs/BETA_TEST_PLAN.md`).

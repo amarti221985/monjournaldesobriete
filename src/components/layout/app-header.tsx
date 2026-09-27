@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { BetaBadge } from "@/components/shared/beta-badge";
 import { BrandMark } from "@/components/shared/brand-mark";
 import { routes } from "@/config/routes";
 import { siteConfig } from "@/config/site";
@@ -19,6 +20,9 @@ export function AppHeader({ actions }: AppHeaderProps) {
       >
         <BrandMark className="size-8 shrink-0" />
         <span className="truncate">{siteConfig.shortName}</span>
+        <span className="hidden sm:inline-flex">
+          <BetaBadge />
+        </span>
       </Link>
       {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
     </header>

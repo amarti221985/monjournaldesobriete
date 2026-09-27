@@ -95,7 +95,7 @@ export async function generateWeeklyInsightAction(): Promise<InsightActionState>
   const blocked = checkWeeklyInsightPreconditions(preferences, provider, source.checkins.length);
   if (blocked) {
     if (blocked.reason === "consent") return { status: "error", message: "Active d'abord les bilans intelligents." };
-    if (blocked.reason === "not_configured") return { status: "error", message: "Les bilans intelligents ne sont pas encore disponibles." };
+    if (blocked.reason === "not_configured") return { status: "error", message: "Les bilans intelligents ne sont pas disponibles pour le moment." };
     return { status: "error", message: "Il n'y a pas encore assez de journées enregistrées pour créer un bilan utile." };
   }
 

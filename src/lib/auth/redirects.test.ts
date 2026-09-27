@@ -8,6 +8,7 @@ import {
   getSafeRedirect,
   needsOnboardingState,
   resolvePostLoginRedirect,
+  resolveRedirectOrigin,
   resolveProxyRedirect,
 } from "@/lib/auth/redirects";
 
@@ -192,5 +193,18 @@ describe("proxy : routage selon l'onboarding", () => {
     expect(needsOnboardingState("/")).toBe(false);
     expect(needsOnboardingState("/reset-password")).toBe(false);
     expect(needsOnboardingState("/auth/callback")).toBe(false);
+  });
+});
+
+describe("resolveRedirectOrigin", () => {
+  it("utilise l'URL publique configurée plutôt que l'adresse interne du serveur", () => {
+    expect(resolveRedirectOrigin("https://0.0.0.0:3000/auth/callback?code=x", new URL("https://journal.example.com"))).toBe(
+      "https://journal.example.com",
+    );
+  });
+
+  it("en local (URL publique locale ou absente) : origine de la requête", () => {
+    expect(resolveRedirectOrigin("http://127.0.0.1:3100/auth/callback", new URL("http://localhost:3000"))).toBe("http://127.0.0.1:3100");
+    expect(resolveRedirectOrigin("http://localhost:3000/auth/callback", null)).toBe("http://localhost:3000");
   });
 });

@@ -5,8 +5,7 @@ import {
   Settings,
   Sun,
   TrendingUp,
-  type LucideIcon,
-} from "lucide-react";
+  type LucideIcon, MessageSquareText } from "lucide-react";
 
 import { routes, type AppRoute } from "@/config/routes";
 
@@ -32,4 +31,5 @@ export const primaryNavigation: readonly NavigationItem[] = [
 /** Navigation secondaire, affichée en bas de la sidebar desktop. */
 export const secondaryNavigation: readonly NavigationItem[] = [
   { label: "Paramètres", shortLabel: "Paramètres", href: routes.settings, icon: Settings, available: true },
+  { label: "Donner mon avis", shortLabel: "Mon avis", href: routes.feedback, icon: MessageSquareText, available: true },
 ];

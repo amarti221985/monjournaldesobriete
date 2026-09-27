@@ -59,7 +59,10 @@ Règles essentielles :
   aucun diagnostic, prédiction, causalité, jugement ni chatbot.
 - Accomplissements : jamais attribués pendant un rendu GET (ADR-089).
 - Rapport PDF (`docs/PDF_EXPORT.md`) : page imprimable `(report)`, `no-store` + `noindex`, jamais
-  la lettre ni les contacts ; aucun service PDF tiers.
+  la lettre ni les contacts ; aucun service PDF tiers ; à l'impression, blocs simples (pas de grille).
+- Bêta V1 (`docs/BETA_*.md`) : avis via `beta_feedback` seulement (aucune capture, aucun outil tiers) ;
+  redirections absolues des Route Handlers via `resolveRedirectOrigin()` (jamais `request.url` seul) ;
+  CSP aussi en meta (le CDN de l'hébergeur remplace l'en-tête) ; pas de Sprint 14 avant les retours.
 - Calendrier : champs minimaux seulement ; journal : `search_journal` (côté base, paginé) ; le terme
   recherché ne va jamais dans l'URL ni dans les journaux.
 - Chemins via `src/config/routes.ts` ; redirections via `getSafeRedirect()`.

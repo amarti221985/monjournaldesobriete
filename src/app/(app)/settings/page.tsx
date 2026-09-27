@@ -1,4 +1,4 @@
-import { ShieldCheck, Sparkles } from "lucide-react";
+import { MessageSquareText, ShieldCheck, Sparkles } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
@@ -153,6 +153,22 @@ export default async function SettingsPage() {
           <Link href={routes.insights}>
             <Sparkles data-icon="inline-start" aria-hidden="true" />
             Ouvrir Mes bilans
+          </Link>
+        </Button>
+      </Section>
+
+      <Section id="beta" title="À propos de la bêta">
+        <div className="grid gap-3 text-sm text-pretty">
+          <p>
+            Tu utilises une version bêta : certaines choses peuvent encore changer ou mal fonctionner. Tes données sont
+            conservées normalement et restent exportables.
+          </p>
+          <p className="text-muted-foreground">{siteConfig.disclaimer}</p>
+        </div>
+        <Button asChild variant="outline" className="justify-self-start">
+          <Link href={routes.feedback}>
+            <MessageSquareText data-icon="inline-start" aria-hidden="true" />
+            Donner mon avis
           </Link>
         </Button>
       </Section>

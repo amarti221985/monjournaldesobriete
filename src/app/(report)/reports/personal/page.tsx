@@ -6,7 +6,7 @@ import type { ReactNode } from "react";
 import { routes } from "@/config/routes";
 import { siteConfig } from "@/config/site";
 import { statusOptions } from "@/features/checkin/constants";
-import { formatApproxDuration } from "@/features/craving/logic";
+import { formatMeasuredDuration } from "@/features/craving/logic";
 import { goalOptions, motivationOptions, type Motivation } from "@/features/onboarding/constants";
 import { formatDecimal, formatPercent } from "@/features/progress/format";
 import { calculateSobrietyMetrics, calculateStreaks } from "@/features/progress/metrics";
@@ -34,8 +34,10 @@ export async function generateMetadata(): Promise<Metadata> {
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="grid gap-3 break-inside-avoid-page">
-      <h2 className="border-b pb-1 text-lg font-semibold">{title}</h2>
+    // À l'impression : blocs simples plutôt qu'une grille (Chrome fragmente mal les grilles
+    // sur plusieurs pages, ce qui superposait des sections) ; le titre reste avec la suite.
+    <section className="grid gap-3 print:block print:space-y-3">
+      <h2 className="border-b pb-1 text-lg font-semibold break-after-avoid">{title}</h2>
       {children}
     </section>
   );
@@ -141,7 +143,7 @@ export default async function PersonalReportPage({ searchParams }: PageProps<"/r
   const generatedAt = new Intl.DateTimeFormat("fr-CA", { dateStyle: "long", timeStyle: "short", timeZone }).format(new Date());
 
   return (
-    <main className="mx-auto grid w-full max-w-3xl gap-8 px-4 py-6 text-foreground sm:px-6 print:max-w-none print:gap-6 print:p-0 print:text-black">
+    <main className="mx-auto grid w-full max-w-3xl gap-8 px-4 py-6 text-foreground sm:px-6 print:block print:max-w-none print:space-y-6 print:p-0 print:text-black">
       <div className="flex flex-col gap-3 rounded-xl border bg-card p-4 sm:flex-row sm:items-center sm:justify-between print:hidden">
         <Link href={routes.settings} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="size-4" aria-hidden="true" />
@@ -215,7 +217,7 @@ export default async function PersonalReportPage({ searchParams }: PageProps<"/r
         {data.checkins.length === 0 ? (
           <p className="text-sm">Aucun check-in sur cette période.</p>
         ) : (
-          <div className="grid gap-3">
+          <div className="grid gap-3 print:block print:space-y-3">
             {data.checkins.map((checkin) => (
               <CheckinEntry
                 key={checkin.checkin_date}
@@ -233,7 +235,7 @@ export default async function PersonalReportPage({ searchParams }: PageProps<"/r
           {data.cravings.length === 0 ? (
             <p className="text-sm">Aucune intervention terminée sur cette période.</p>
           ) : (
-            <div className="grid gap-2">
+            <div className="grid gap-2 print:block print:space-y-2">
               {data.cravings.map((craving, index) => {
                 const intervention = Array.isArray(craving.craving_interventions)
                   ? craving.craving_interventions[0]
@@ -246,7 +248,7 @@ export default async function PersonalReportPage({ searchParams }: PageProps<"/r
                       {intervention
                         ? ` · Stratégie : ${intervention.craving_strategies?.name_fr ?? intervention.custom_strategy_text ?? "—"}`
                         : ""}
-                      {intervention?.actual_duration_seconds != null ? ` · Durée : environ ${formatApproxDuration(intervention.actual_duration_seconds)}` : ""}
+                      {intervention?.actual_duration_seconds != null ? ` · Durée : ${formatMeasuredDuration(intervention.actual_duration_seconds)}` : ""}
                     </p>
                     {craving.context_text ? <p className="text-pretty whitespace-pre-line">Contexte : {craving.context_text}</p> : null}
                   </article>

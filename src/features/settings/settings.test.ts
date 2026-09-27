@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { contentSecurityPolicy, securityHeaders } from "@/config/security-headers";
+import { contentSecurityPolicy, metaContentSecurityPolicy, securityHeaders } from "@/config/security-headers";
 import { buildDataExport, EXPORT_VERSION, exportFilename, type ExportSource } from "@/features/settings/export";
 import {
   deleteAccountSchema,
@@ -166,7 +166,7 @@ describe("export des données", () => {
     expect(data.export_version).toBe(EXPORT_VERSION);
     expect(data.exported_at).toBe("2026-09-26T15:00:00.000Z");
     expect(data.timezone).toBe("America/Toronto");
-    expect(Object.keys(data)).toEqual(["export_version", "exported_at", "timezone", "account", "journey", "checkins", "craving_events", "personal_plan", "achievements", "ai"]);
+    expect(Object.keys(data)).toEqual(["export_version", "exported_at", "timezone", "account", "journey", "checkins", "craving_events", "personal_plan", "achievements", "beta_feedback", "ai"]);
   });
 
   it("toutes les catégories : multi-substance, consommations multiples, intervention, plan, lettre, accomplissements", () => {
@@ -188,5 +188,14 @@ describe("export des données", () => {
 
   it("nom de fichier neutre", () => {
     expect(exportFilename("2026-09-26")).toBe("mes-donnees-2026-09-26.json");
+  });
+});
+
+describe("CSP en balise meta (CDN de l'hébergeur)", () => {
+  it("reprend la politique sans frame-ancestors (invalide en meta, couvert par X-Frame-Options)", () => {
+    expect(metaContentSecurityPolicy).not.toContain("frame-ancestors");
+    expect(metaContentSecurityPolicy).toContain("default-src 'self'");
+    expect(metaContentSecurityPolicy).toContain("object-src 'none'");
+    expect(contentSecurityPolicy).toContain("frame-ancestors 'none'");
   });
 });

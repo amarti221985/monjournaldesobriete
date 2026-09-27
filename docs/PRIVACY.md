@@ -55,6 +55,7 @@ Aucune donnée stockée sans usage identifiée.
 | Accomplissements obtenus | `user_achievements` | `user_id` | faible | oui | oui (cascade) |
 | Préférences et consentement IA | `ai_preferences` | `user_id` | faible | oui (sans compteur) | oui (cascade) |
 | Bilans intelligents (résultat validé seulement) | `ai_reflections` | `user_id` | oui | oui | oui (cascade) |
+| Avis bêta (écrits volontairement) | `beta_feedback` | `user_id` | moyen | oui | oui (cascade) |
 | Catalogues | `substances`, `emotions`, `trigger_types`, `achievement_types`, `craving_strategies`, `achievement_definitions` | système | non | libellés utilisés seulement | non (communs) |
 
 ## Stockage et tiers techniques

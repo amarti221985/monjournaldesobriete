@@ -197,6 +197,33 @@ export type Database = {
         }
         Relationships: []
       }
+      beta_feedback: {
+        Row: {
+          category: string
+          created_at: string
+          id: string
+          message: string
+          page_context: string | null
+          user_id: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          id?: string
+          message: string
+          page_context?: string | null
+          user_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: string
+          message?: string
+          page_context?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       checkin_achievements: {
         Row: {
           achievement_type_id: string

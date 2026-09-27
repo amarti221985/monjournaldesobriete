@@ -15,7 +15,9 @@ const RATE_LIMIT_CODES = new Set([
 
 const GENERIC_MESSAGES: Record<AuthErrorContext, string> = {
   login: "Impossible de se connecter avec ces informations.",
-  signup: "Impossible de créer le compte pour le moment. Réessaie dans quelques instants.",
+  // Ne confirme pas l'existence d'un compte, mais évite l'impasse : chemin vers la connexion.
+  signup:
+    "Impossible de créer un compte avec ces informations. Si tu as déjà un compte, connecte-toi ou utilise « Mot de passe oublié ».",
   resetPassword: "Impossible de mettre à jour le mot de passe pour le moment. Réessaie dans quelques instants.",
 };
 

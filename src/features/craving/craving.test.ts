@@ -9,6 +9,7 @@ import {
   describeCravingResult,
   describeStrategyEffectiveness,
   formatApproxDuration,
+  formatMeasuredDuration,
   formatCountdown,
   formatCravingDelta,
   getCravingChange,
@@ -165,6 +166,8 @@ describe("minuteur fondé sur des horodatages", () => {
     expect(formatApproxDuration(30)).toBe("moins d'une minute");
     expect(formatApproxDuration(600)).toBe("10 min");
     expect(formatApproxDuration(3900)).toBe("1 h 05");
+    expect(formatMeasuredDuration(30)).toBe("moins d'une minute");
+    expect(formatMeasuredDuration(600)).toBe("environ 10 min");
   });
 });
 

@@ -62,13 +62,19 @@ export default async function JournalDayPage({ params }: PageProps<"/journal/[da
         <StatusMessage
           icon={NotebookPen}
           title={formatWeekdayDate(date)}
-          description={isTodayDraft ? "Ton check-in est en cours." : "Aucun check-in enregistré pour cette journée."}
+          description={
+            isTodayDraft
+              ? "Ton check-in est en cours."
+              : date === today
+                ? "Aucun check-in enregistré pour cette journée."
+                : "Aucun check-in enregistré pour cette journée. Elle reste non documentée : elle ne compte ni comme journée sobre, ni comme consommation, et ne rompt pas ta série. Le check-in se fait le jour même, depuis Aujourd'hui."
+          }
         >
-          {date === today ? (
-            <Button asChild size="lg">
-              <Link href={routes.checkin}>{isTodayDraft ? "Continuer mon check-in" : "Faire mon check-in"}</Link>
-            </Button>
-          ) : null}
+          <Button asChild size="lg">
+            <Link href={routes.checkin}>
+              {isTodayDraft ? "Continuer mon check-in" : date === today ? "Faire mon check-in" : "Faire mon check-in d'aujourd'hui"}
+            </Link>
+          </Button>
         </StatusMessage>
       </PageContainer>
     );

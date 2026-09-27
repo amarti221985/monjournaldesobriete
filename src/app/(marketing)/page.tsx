@@ -1,6 +1,7 @@
 import { ArrowRight, NotebookPen, Sprout, TrendingUp, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 
+import { BetaBadge } from "@/components/shared/beta-badge";
 import { BrandMark } from "@/components/shared/brand-mark";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,6 +39,11 @@ export default function HomePage() {
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-14 px-4 pt-10 pb-6 sm:gap-20 sm:px-6 sm:pt-20">
       <section aria-labelledby="hero-title" className="flex flex-col items-center text-center">
         <BrandMark className="size-14 rounded-2xl [&_svg]:size-7" />
+        {siteConfig.isBeta ? (
+          <p className="mt-4">
+            <BetaBadge />
+          </p>
+        ) : null}
         <h1
           id="hero-title"
           className="mt-6 text-3xl font-semibold tracking-tight text-balance sm:text-5xl"
@@ -47,6 +53,10 @@ export default function HomePage() {
         <p className="mt-3 text-lg font-medium text-primary sm:text-xl">{siteConfig.tagline}</p>
         <p className="mt-4 max-w-xl text-base text-pretty text-muted-foreground sm:text-lg">
           Comprends tes habitudes, reconnais tes progrès et construis ta sobriété à ton rythme.
+        </p>
+        <p className="mt-3 max-w-xl text-sm text-pretty text-muted-foreground">
+          Pour toute personne qui souhaite arrêter, réduire ou simplement observer sa consommation d&apos;alcool, de
+          cannabis ou d&apos;autres substances. Gratuit pendant la bêta.
         </p>
         <div className="mt-8 flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
           <Button asChild size="lg" className="w-full sm:w-auto">
@@ -61,7 +71,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section aria-label="Ce que propose l'application">
+      <section aria-label="Ce que propose l'application" className="grid gap-6">
         <ul className="grid gap-4 sm:grid-cols-3">
           {features.map(({ title, description, icon: Icon }) => (
             <li key={title} className="flex">
@@ -84,6 +94,10 @@ export default function HomePage() {
             </li>
           ))}
         </ul>
+        <p className="mx-auto max-w-2xl text-center text-sm text-pretty text-muted-foreground">
+          Ton journal est privé : il n&apos;est ni public ni partagé. Tu peux exporter tes données ou supprimer ton compte à
+          tout moment. Les bilans générés avec l&apos;aide de l&apos;IA sont facultatifs et désactivés par défaut.
+        </p>
       </section>
     </div>
   );

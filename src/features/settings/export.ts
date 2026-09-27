@@ -5,7 +5,7 @@
  * donnée interne de Supabase.
  */
 
-/** v2 (Sprint 12) : ajout des préférences et des bilans intelligents (`ai`). */
+/** v2 (Sprint 12) : ajout des préférences et des bilans intelligents (`ai`) ; Sprint 13 : `beta_feedback` (ajout compatible). */
 export const EXPORT_VERSION = 2;
 
 type Named = { name_fr: string } | null;
@@ -92,6 +92,7 @@ export type ExportSource = {
     consent_version: string | null;
     revoked_at: string | null;
   } | null;
+  betaFeedback?: { category: string; message: string; page_context: string | null; created_at: string }[];
   aiReflections?: { period_start: string; period_end: string; type: string; summary: string; content: unknown; model: string | null; prompt_version: string; generated_at: string }[];
 };
 
@@ -223,6 +224,7 @@ export function buildDataExport(source: ExportSource, exportedAt: Date = new Dat
       earned_at: row.earned_at,
     })),
     // Bilans intelligents : préférences et bilans conservés (jamais de clé, de prompt ni de réponse brute).
+    beta_feedback: (source.betaFeedback ?? []).map((row) => ({ ...row })),
     ai: {
       preferences: source.aiPreferences ?? null,
       reflections: (source.aiReflections ?? []).map((row) => ({ ...row })),

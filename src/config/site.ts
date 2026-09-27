@@ -11,7 +11,9 @@ export const siteConfig = {
    */
   defaultTimeZone: "America/Toronto",
   disclaimer:
-    "Mon Journal de Sobriété est un outil de journalisation et de suivi personnel. Il ne remplace pas les conseils ou soins d'un professionnel de la santé.",
+    "Mon Journal de Sobriété est un outil de suivi et de réflexion personnelle. Il ne remplace pas un médecin, un psychologue ou un autre professionnel de la santé, ni les services d'urgence : en cas de danger, compose le 911.",
+  /** Bêta V1 (Sprint 13) : badge discret près du nom, lien « Donner mon avis ». */
+  isBeta: true,
 } as const;
 
 export type SiteConfig = typeof siteConfig;
