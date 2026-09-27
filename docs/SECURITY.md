@@ -133,7 +133,9 @@ personnelles ni dans `auth.users`, l'autre utilisateur intact.
   suppression seulement ; écriture par `save_ai_reflection()`.
 - `reserve_ai_generation()` / `save_ai_reflection()` : SECURITY DEFINER sans paramètre
   d'utilisateur (`auth.uid()`), `search_path = ''`, consentement actif exigé, 3 générations / jour,
-  non exécutables par `anon`. Tests : `supabase/tests/ai_rls.sql` (20 vérifications).
+  non exécutables par `anon`. `release_ai_generation(jeton)` rend un essai échoué côté fournisseur ;
+  jeton secret gardé côté serveur, table `ai_generation_reservations` sans aucun droit client.
+  Tests : `supabase/tests/ai_rls.sql` (24 vérifications).
 - Contrôles AVANT réservation (consentement, clé, données suffisantes) ; aucun appel au fournisseur
   sans consentement (vérifié en intégration avec un faux fournisseur local).
 - Rapport `/reports/personal` : session + onboarding, RLS, `Cache-Control: private, no-store`,

@@ -1,7 +1,7 @@
 -- =============================================================================
 -- Vérification des bilans intelligents (Sprint 12) : consentement obligatoire, limite
 -- de 3 générations par jour, compteur non modifiable, écriture uniquement par RPC,
--- remplacement d'une période, désactivation, isolation A/B et suppression en cascade.
+-- remplacement d'une période, libération d'un essai (jeton serveur), désactivation, isolation A/B et suppression en cascade.
 --
 -- Usage :
 --   npx supabase db query --linked -f supabase/tests/ai_rls.sql
@@ -10,7 +10,7 @@
 -- écritures (utilisateurs fictifs compris) sont annulées. Aucune donnée réelle.
 --
 -- Résultat attendu (affiché comme une erreur, c'est voulu) :
---   RLS_OK — ai : 20 vérifications réussies (transaction annulée volontairement)
+--   RLS_OK — ai : 24 vérifications réussies (transaction annulée volontairement)
 -- =============================================================================
 
 do $$
@@ -25,6 +25,8 @@ declare
   v_id uuid;
   v_id2 uuid;
   v_summary text;
+  v_token uuid;
+  v_ok boolean;
 begin
   insert into auth.users (id, aud, role, email, raw_user_meta_data) values
     (user_a, 'authenticated', 'authenticated', 'ai-test-a@example.invalid', '{"display_name":"A","timezone":"America/Toronto"}'),
@@ -74,7 +76,7 @@ begin
   -- 6. Activation avec consentement : 3 réservations, la 4e est refusée
   update public.ai_preferences set ai_enabled = true, consented_at = now(), consent_version = '1' where user_id = user_a;
   for i in 1..3 loop
-    v_remaining := public.reserve_ai_generation();
+    select remaining into v_remaining from public.reserve_ai_generation();
     if v_remaining <> 3 - i then raise exception 'ÉCHEC 6 : % restante(s) après % réservation(s)', v_remaining, i; end if;
   end loop;
   v_error := null;
@@ -85,7 +87,27 @@ begin
   perform set_config('role', 'postgres', true);
   update public.ai_preferences set generations_date = v_today - 1 where user_id = user_a;
   perform set_config('role', 'authenticated', true);
-  if public.reserve_ai_generation() <> 2 then raise exception 'ÉCHEC 8 : compteur non réinitialisé'; end if;
+  select remaining, reservation into v_remaining, v_token from public.reserve_ai_generation();
+  if v_remaining <> 2 then raise exception 'ÉCHEC 8 : compteur non réinitialisé'; end if;
+
+  -- 21. Libération avec un mauvais jeton : refusée, compteur inchangé
+  if public.release_ai_generation(gen_random_uuid()) then raise exception 'ÉCHEC 21 : libération sans le bon jeton'; end if;
+  select generations_count into v_count from public.ai_preferences where user_id = user_a;
+  if v_count <> 1 then raise exception 'ÉCHEC 21 : compteur modifié (%)', v_count; end if;
+
+  -- 22. Libération avec le jeton de la réservation : compteur rendu, une seule fois
+  v_ok := public.release_ai_generation(v_token);
+  select generations_count into v_count from public.ai_preferences where user_id = user_a;
+  if not v_ok or v_count <> 0 then raise exception 'ÉCHEC 22 : libération (% / %)', v_ok, v_count; end if;
+  if public.release_ai_generation(v_token) then raise exception 'ÉCHEC 22 : double libération'; end if;
+
+  -- 23. Les jetons de réservation ne sont lisibles par aucun client
+  begin
+    perform 1 from public.ai_generation_reservations;
+    raise exception 'ÉCHEC 23 : réservations lisibles';
+  exception when insufficient_privilege then null;
+  end;
+  perform public.reserve_ai_generation();
 
   -- 9. Écriture directe dans ai_reflections : refusée (RPC uniquement)
   begin
@@ -151,7 +173,8 @@ begin
 
   -- 17. anon ne peut exécuter aucune RPC IA
   if has_function_privilege('anon', 'public.reserve_ai_generation()', 'EXECUTE')
-     or has_function_privilege('anon', 'public.save_ai_reflection(date, date, text, jsonb, text, text, text)', 'EXECUTE') then
+     or has_function_privilege('anon', 'public.save_ai_reflection(date, date, text, jsonb, text, text, text)', 'EXECUTE')
+     or has_function_privilege('anon', 'public.release_ai_generation(uuid)', 'EXECUTE') then
     raise exception 'ÉCHEC 17 : RPC IA exécutable par anon';
   end if;
 
@@ -174,15 +197,16 @@ begin
   get diagnostics v_count = row_count;
   if v_count <> 1 then raise exception 'ÉCHEC 19 : suppression de son bilan'; end if;
 
-  -- 20. Suppression du compte : préférences et bilans supprimés en cascade
+  -- 20 et 24. Suppression du compte : préférences, bilans et réservations supprimés en cascade
   update public.ai_preferences set ai_enabled = true, consented_at = now(), consent_version = '1' where user_id = user_a;
   perform public.save_ai_reflection(v_today - 6, v_today, 'Bilan fictif.', v_content, 'test', 'modele-fictif', 'weekly-reflection-v1');
   perform public.delete_my_account();
   perform set_config('role', 'postgres', true);
   select (select count(*) from public.ai_preferences where user_id = user_a) + (select count(*) from public.ai_reflections where user_id = user_a)
+       + (select count(*) from public.ai_generation_reservations where user_id = user_a)
     into v_count;
   if v_count <> 0 then raise exception 'ÉCHEC 20 : % ligne(s) IA restante(s) après suppression du compte', v_count; end if;
 
-  raise exception 'RLS_OK — ai : 20 vérifications réussies (transaction annulée volontairement)';
+  raise exception 'RLS_OK — ai : 24 vérifications réussies (transaction annulée volontairement)';
 end;
 $$;

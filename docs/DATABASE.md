@@ -329,13 +329,19 @@ paramètre d'utilisateur (`auth.uid()`, `search_path = ''`) : `reserve_ai_genera
 `ai_rate_limited`) et `save_ai_reflection(...)` (consentement actif, upsert par période).
 Jamais de prompt, de jeu de données ni de réponse brute en base.
 
+Migration `20261003090000_ai_generation_release.sql` : `reserve_ai_generation()` renvoie
+`(remaining, reservation)` ; `release_ai_generation(p_reservation uuid)` rend l'essai (même jour
+UTC, une seule fois) si le jeton correspond. Table interne `ai_generation_reservations` (PK
+`user_id` → `auth.users` CASCADE, RLS sans policy, aucun droit client).
+
 ### Vérifier les bilans intelligents
 
 ```bash
 npx supabase db query --linked -f supabase/tests/ai_rls.sql
 ```
 
-Résultat attendu : `RLS_OK — ai : 20 vérifications réussies` (consentement requis, activation sans
+Résultat attendu : `RLS_OK — ai : 24 vérifications réussies` (libération : mauvais jeton refusé,
+bon jeton une seule fois, jetons illisibles par les clients ; consentement requis, activation sans
 consentement refusée, compteur non modifiable, 3 / jour puis refus, remise à zéro le lendemain,
 écriture directe refusée, régénération qui remplace, contraintes de forme, isolation A/B, RPC non
 exécutables par `anon`, désactivation qui conserve les bilans, suppression en cascade).

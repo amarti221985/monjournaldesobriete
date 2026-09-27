@@ -7,7 +7,7 @@ import { AI_LIMITS, truncateForAi, type AiPreferences } from "@/lib/ai/privacy";
 import { buildWeeklyReflectionUserMessage, WEEKLY_REFLECTION_SYSTEM_PROMPT } from "@/lib/ai/prompts";
 import type { AiProvider, ProviderOutcome } from "@/lib/ai/provider";
 import type { WeeklyReflection } from "@/lib/ai/schemas";
-import { checkWeeklyInsightPreconditions, generateWeeklyInsight, getWeeklyPeriod } from "@/lib/ai/weekly";
+import { checkWeeklyInsightPreconditions, generateWeeklyInsight, getWeeklyPeriod, isRefundableFailure } from "@/lib/ai/weekly";
 
 /*
  * Bilans intelligents (Sprint 12) : minimisation du jeu de données, garde-fous, flux avec
@@ -248,12 +248,17 @@ describe("generateWeeklyInsight — fournisseur simulé", () => {
     expect(failing.calls).toHaveLength(2);
   });
 
-  it("traduit un refus, un délai dépassé ou une indisponibilité en erreur générique", async () => {
+  it("échec du fournisseur : rendu (non compté) sauf refus du modèle", async () => {
     for (const reason of ["refusal", "timeout", "unavailable", "error"] as const) {
       const provider = fakeProvider([{ ok: false, reason }]);
-      expect(await generateWeeklyInsight({ preferences: ENABLED, source: source(), provider })).toEqual({ ok: false, reason: "provider" });
+      const outcome = await generateWeeklyInsight({ preferences: ENABLED, source: source(), provider });
+      expect(outcome).toEqual({ ok: false, reason: "provider", providerReason: reason });
+      expect(isRefundableFailure(outcome)).toBe(reason !== "refusal");
       expect(provider.calls).toHaveLength(1);
     }
+    const bad = { ...validReflection(), summary: "Cette semaine a été un échec pour toi, clairement." };
+    const invalid = await generateWeeklyInsight({ preferences: ENABLED, source: source(), provider: fakeProvider([{ ok: true, output: bad }]) });
+    expect(isRefundableFailure(invalid)).toBe(false);
   });
 
   it("période : 7 journées calendaires, aujourd'hui inclus", () => {

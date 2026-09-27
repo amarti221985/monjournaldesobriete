@@ -6,7 +6,7 @@ import { z } from "zod";
 import { routes } from "@/config/routes";
 import { getConfiguredAiProvider } from "@/lib/ai/anthropic-provider";
 import { PROMPT_VERSION } from "@/lib/ai/prompts";
-import { checkWeeklyInsightPreconditions, generateWeeklyInsight, getWeeklyPeriod } from "@/lib/ai/weekly";
+import { checkWeeklyInsightPreconditions, generateWeeklyInsight, getWeeklyPeriod, isRefundableFailure } from "@/lib/ai/weekly";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getUserToday } from "@/lib/dates";
 import {
@@ -14,6 +14,7 @@ import {
   deleteAiReflection,
   deleteAllAiReflections,
   getAiPreferences,
+  releaseAiGeneration,
   reserveAiGeneration,
   saveAiPreferences,
   saveAiReflection,
@@ -30,6 +31,8 @@ export type InsightActionState = { status: "ok"; message?: string } | { status: 
 
 const SESSION_EXPIRED: InsightActionState = { status: "error", message: "Ta session a expiré. Reconnecte-toi pour continuer." };
 const GENERATION_ERROR = "Impossible de générer ton bilan pour le moment. Tes données n'ont pas été modifiées.";
+const GENERATION_NOT_COUNTED =
+  "Impossible de générer ton bilan pour le moment. Cet essai n'est pas compté dans ta limite quotidienne, et tes données n'ont pas été modifiées.";
 
 function revalidate() {
   revalidatePath(routes.insights);
@@ -99,7 +102,13 @@ export async function generateWeeklyInsightAction(): Promise<InsightActionState>
   }
 
   const outcome = await generateWeeklyInsight({ preferences, source, provider });
-  if (!outcome.ok || !provider) return { status: "error", message: GENERATION_ERROR };
+  if (!outcome.ok || !provider) {
+    // Échec extérieur au contenu (clé, crédits, service) : l'essai n'est pas compté.
+    if (isRefundableFailure(outcome) && (await releaseAiGeneration(reserved.reservation))) {
+      return { status: "error", message: GENERATION_NOT_COUNTED };
+    }
+    return { status: "error", message: GENERATION_ERROR };
+  }
 
   const saved = await saveAiReflection({
     periodStart: period.start,

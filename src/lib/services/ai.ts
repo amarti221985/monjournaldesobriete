@@ -117,7 +117,8 @@ export async function listAiReflections(userId: string, limit = 12): Promise<AiR
   }));
 }
 
-export type ReserveResult = { ok: true; remaining: number } | { ok: false; reason: "consent" | "rate_limited" | "error" };
+/** `reservation` : jeton secret de libération, gardé côté serveur (jamais renvoyé au navigateur). */
+export type ReserveResult = { ok: true; remaining: number; reservation: string } | { ok: false; reason: "consent" | "rate_limited" | "error" };
 
 /** Réserve une génération (consentement actif, 3 / jour) AVANT l'appel au fournisseur. */
 export async function reserveAiGeneration(): Promise<ReserveResult> {
@@ -129,7 +130,20 @@ export async function reserveAiGeneration(): Promise<ReserveResult> {
     console.error("[ai] Réservation impossible", { code: error.code });
     return { ok: false, reason: "error" };
   }
-  return { ok: true, remaining: data };
+  const row = data[0];
+  if (!row) return { ok: false, reason: "error" };
+  return { ok: true, remaining: row.remaining, reservation: row.reservation };
+}
+
+/**
+ * Rend un essai qui a échoué côté fournisseur ou configuration (aucun bilan produit).
+ * Exige le jeton de la réservation : impossible de libérer la réservation d'une autre requête.
+ */
+export async function releaseAiGeneration(reservation: string): Promise<boolean> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("release_ai_generation", { p_reservation: reservation });
+  if (error) console.error("[ai] Libération impossible", { code: error.code });
+  return !error && data === true;
 }
 
 export async function saveAiReflection(input: {

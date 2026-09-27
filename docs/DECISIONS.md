@@ -1040,7 +1040,8 @@ acceptée : on en ajoute une nouvelle qui la remplace (statut « Remplacée par 
   version du prompt, date. Jamais le prompt, le jeu de données, les textes envoyés ni la réponse
   brute. Écriture uniquement par `save_ai_reflection()` (consentement actif) ; régénérer la même
   période remplace. Limite de 3 générations / jour appliquée par `reserve_ai_generation()` avant
-  l'appel (compteur non modifiable par le client).
+  l'appel (compteur non modifiable par le client). Un échec extérieur au contenu (clé, crédits,
+  service indisponible) est rendu grâce à un jeton de réservation connu seulement du serveur.
 
 ## ADR-088 — Le PDF est produit par le navigateur à partir d'une page protégée
 

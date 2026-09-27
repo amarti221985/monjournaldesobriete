@@ -1,7 +1,7 @@
 import { buildWeeklyInsightDataset, type WeeklyInsightDataset, type WeeklyInsightSource } from "@/lib/ai/dataset";
 import { validateWeeklyReflection } from "@/lib/ai/guardrails";
 import { AI_LIMITS, type AiPreferences } from "@/lib/ai/privacy";
-import type { AiProvider } from "@/lib/ai/provider";
+import type { AiProvider, ProviderOutcome } from "@/lib/ai/provider";
 import type { WeeklyReflection } from "@/lib/ai/schemas";
 import { addDays } from "@/lib/dates";
 
@@ -17,14 +17,29 @@ export function getWeeklyPeriod(today: string): { start: string; end: string } {
 
 export type WeeklyInsightOutcome =
   | { ok: true; reflection: WeeklyReflection; dataset: WeeklyInsightDataset }
-  | { ok: false; reason: "consent" | "not_configured" | "insufficient_data" | "provider" | "invalid_output" };
+  | PreconditionFailure
+  | { ok: false; reason: "invalid_output" }
+  | { ok: false; reason: "provider"; providerReason: Exclude<ProviderFailure, "invalid_output"> };
+
+export type PreconditionFailure = { ok: false; reason: "consent" | "not_configured" | "insufficient_data" };
+
+type ProviderFailure = Extract<ProviderOutcome, { ok: false }>["reason"];
+
+/**
+ * Un échec est « rendu » (non compté dans la limite) quand aucun bilan n'a pu être produit
+ * pour une raison extérieure au contenu : clé, crédits, service indisponible, délai. Un
+ * refus du modèle ou une sortie refusée par les garde-fous restent comptés.
+ */
+export function isRefundableFailure(outcome: WeeklyInsightOutcome): boolean {
+  return !outcome.ok && outcome.reason === "provider" && outcome.providerReason !== "refusal";
+}
 
 /** Contrôles préalables, sans appel au fournisseur (aucune génération consommée). */
 export function checkWeeklyInsightPreconditions(
   preferences: AiPreferences,
   provider: AiProvider | null,
   checkinCount: number,
-): Extract<WeeklyInsightOutcome, { ok: false }> | null {
+): PreconditionFailure | null {
   if (!preferences.aiEnabled) return { ok: false, reason: "consent" };
   if (!provider) return { ok: false, reason: "not_configured" };
   if (checkinCount < AI_LIMITS.minCheckins) return { ok: false, reason: "insufficient_data" };
@@ -49,7 +64,7 @@ export async function generateWeeklyInsight(input: {
     if (!outcome.ok) {
       console.warn("[ai] bilan non obtenu", { attempt: attempt + 1, reason: outcome.reason });
       if (outcome.reason === "invalid_output") continue;
-      return { ok: false, reason: "provider" };
+      return { ok: false, reason: "provider", providerReason: outcome.reason };
     }
     const validated = validateWeeklyReflection(outcome.output, dataset);
     // Codes techniques seulement (jamais le texte du bilan).

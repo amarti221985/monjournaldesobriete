@@ -89,6 +89,27 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_generation_reservations: {
+        Row: {
+          reserved_at: string
+          reserved_on: string
+          token: string
+          user_id: string
+        }
+        Insert: {
+          reserved_at?: string
+          reserved_on: string
+          token: string
+          user_id: string
+        }
+        Update: {
+          reserved_at?: string
+          reserved_on?: string
+          token?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       ai_preferences: {
         Row: {
           ai_enabled: boolean
@@ -1208,7 +1229,17 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      reserve_ai_generation: { Args: never; Returns: number }
+      release_ai_generation: {
+        Args: { p_reservation: string }
+        Returns: boolean
+      }
+      reserve_ai_generation: {
+        Args: never
+        Returns: {
+          remaining: number
+          reservation: string
+        }[]
+      }
       save_ai_reflection: {
         Args: {
           p_content: Json

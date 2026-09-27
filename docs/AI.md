@@ -94,7 +94,11 @@ unitaires (marqueurs fictifs) et par un test d'intégration qui capture la requ�
 
 - 3 générations par jour et par utilisateur (journée UTC), appliquées par la base
   (`reserve_ai_generation`, compteur non modifiable par le client). La réservation a lieu **avant**
-  l'appel ; une génération échouée est comptée.
+  l'appel. Un échec extérieur au contenu (clé refusée, crédits, service indisponible, délai) est
+  **rendu** par `release_ai_generation(jeton)` : le jeton secret est créé à la réservation, stocké
+  dans `ai_generation_reservations` (aucun droit client) et connu seulement de la Server Action ;
+  un utilisateur ne peut donc pas libérer lui-même une réservation. Un refus du modèle ou une sortie
+  refusée par les garde-fous restent comptés (jetons consommés).
 - Au moins 3 check-ins terminés sur la période, sinon « Il n'y a pas encore assez de journées
   enregistrées pour créer un bilan utile. ».
 
