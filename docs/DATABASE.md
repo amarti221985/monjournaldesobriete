@@ -302,7 +302,7 @@ ne sont jamais lus par les statistiques.
 | références vers `user_substances` (`consumption_events`, `craving_event_substances`) | — | `(user_substance_id, user_id)` | NO ACTION **différée** (supprimées par les cascades avant le commit) |
 | références vers les catalogues | — | `emotions`, `trigger_types`, … | NO ACTION (catalogues jamais supprimés) |
 
-RLS activée sur les 28 tables ; policies `(select auth.uid()) = user_id` (ou `id`) par opération
+RLS activée sur les 30 tables ; policies `(select auth.uid()) = user_id` (ou `id`) par opération
 accordée ; catalogues en lecture seule ; `user_achievements` en lecture seule.
 
 ### Vérifier la sécurité
@@ -311,10 +311,34 @@ accordée ; catalogues en lecture seule ; `user_achievements` en lecture seule.
 npx supabase db query --linked -f supabase/tests/security_rls.sql
 ```
 
-Résultat attendu : `RLS_OK — security : 16 vérifications réussies` (jeu complet sur 22 tables ;
+Résultat attendu : `RLS_OK — security : 16 vérifications réussies` (jeu complet sur 24 tables ;
 lecture, modification, suppression et insertion croisées refusées ; références croisées ; RPC avec
 UUID devinés ; affectation de masse ; dates futures ; 7e substance ; fuseau ; droits des fonctions ;
 suppression non authentifiée refusée ; suppression de A : 0 ligne restante, B intact).
+
+### Bilans intelligents — migration `20261002090000_create_ai_insights.sql`
+
+| Table | Rôle | Droits du client |
+| --- | --- | --- |
+| `ai_preferences` | Une ligne par utilisateur (PK `user_id` → `auth.users` CASCADE) : `ai_enabled` (défaut false), catégories (`include_reflections` true, `include_consumption_context` / `include_craving_context` false), `consented_at`, `consent_version`, `revoked_at`, compteur `generations_date` / `generations_count` | select ; insert / update des préférences seulement (jamais le compteur) |
+| `ai_reflections` | Bilans validés : `period_start`, `period_end` (≤ 31 j), `type` 'weekly', `summary` (≤ 1200), `content` jsonb objet (≤ 32 Ko), `provider`, `model`, `prompt_version`, `generated_at` ; unique `(user_id, type, period_start, period_end)` | select, delete |
+
+Contrainte : `ai_enabled` exige `consented_at` et `consent_version`. RPC SECURITY DEFINER sans
+paramètre d'utilisateur (`auth.uid()`, `search_path = ''`) : `reserve_ai_generation()`
+(consentement actif, 3 / journée UTC, renvoie le nombre restant ; erreurs `ai_consent_required`,
+`ai_rate_limited`) et `save_ai_reflection(...)` (consentement actif, upsert par période).
+Jamais de prompt, de jeu de données ni de réponse brute en base.
+
+### Vérifier les bilans intelligents
+
+```bash
+npx supabase db query --linked -f supabase/tests/ai_rls.sql
+```
+
+Résultat attendu : `RLS_OK — ai : 20 vérifications réussies` (consentement requis, activation sans
+consentement refusée, compteur non modifiable, 3 / jour puis refus, remise à zéro le lendemain,
+écriture directe refusée, régénération qui remplace, contraintes de forme, isolation A/B, RPC non
+exécutables par `anon`, désactivation qui conserve les bilans, suppression en cascade).
 
 ### Accomplissements — migration `20260930090000_create_achievements.sql`
 

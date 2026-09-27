@@ -5,7 +5,8 @@
  * donnée interne de Supabase.
  */
 
-export const EXPORT_VERSION = 1;
+/** v2 (Sprint 12) : ajout des préférences et des bilans intelligents (`ai`). */
+export const EXPORT_VERSION = 2;
 
 type Named = { name_fr: string } | null;
 type Slugged = { slug: string; name_fr: string } | null;
@@ -82,6 +83,16 @@ export type ExportSource = {
   reminder: { content: string; updated_at: string } | null;
   letter: { title: string | null; content: string; updated_at: string } | null;
   achievements: { earned_at: string; achievement_definitions: { slug: string; name_fr: string; category: string } | null }[];
+  aiPreferences?: {
+    ai_enabled: boolean;
+    include_reflections: boolean;
+    include_consumption_context: boolean;
+    include_craving_context: boolean;
+    consented_at: string | null;
+    consent_version: string | null;
+    revoked_at: string | null;
+  } | null;
+  aiReflections?: { period_start: string; period_end: string; type: string; summary: string; content: unknown; model: string | null; prompt_version: string; generated_at: string }[];
 };
 
 type ExportIntervention = {
@@ -211,6 +222,11 @@ export function buildDataExport(source: ExportSource, exportedAt: Date = new Dat
       category: row.achievement_definitions?.category ?? null,
       earned_at: row.earned_at,
     })),
+    // Bilans intelligents : préférences et bilans conservés (jamais de clé, de prompt ni de réponse brute).
+    ai: {
+      preferences: source.aiPreferences ?? null,
+      reflections: (source.aiReflections ?? []).map((row) => ({ ...row })),
+    },
   };
 }
 

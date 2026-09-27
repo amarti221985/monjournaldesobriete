@@ -39,11 +39,11 @@ conformité juridique (voir [PRIVACY.md](./PRIVACY.md)).
   `(parent_id, user_id)` vers le parent : impossible de rattacher une ligne au parent d'un autre
   compte, même avec son UUID. Les références vers `user_substances` sont aussi composites
   (`(user_substance_id, user_id)`), différées au commit (voir §6).
-- Tests : `supabase/tests/security_rls.sql` (A / B sur les 22 tables personnelles : lecture,
+- Tests : `supabase/tests/security_rls.sql` (A / B sur les 24 tables personnelles : lecture,
   modification, suppression, insertion au nom de l'autre, références croisées, RPC avec UUID
   devinés, affectation de masse, dates futures, fuseau, fonctions, suppression du compte) ; tests
   par domaine (`profiles`, `onboarding`, `checkins`, `journal`, `craving`, `plan`,
-  `achievements`).
+  `achievements`, `ai`).
 
 ## 3. Fonctions (RPC) et SECURITY DEFINER
 
@@ -106,7 +106,7 @@ transaction** (aucun état partiel). Les références `consumption_events` /
 `craving_event_substances` → `user_substances` sont **différées** : sans cela, la suppression d'un
 compte ayant des consommations échouait (constat du Sprint 11, corrigé). Après la suppression, la
 session locale et les cookies `sb-*` sont effacés ; redirection vers `/account-deleted`.
-Vérifié sur la base distante : aucune ligne de l'utilisateur supprimé dans les 22 tables
+Vérifié sur la base distante : aucune ligne de l'utilisateur supprimé dans les 24 tables
 personnelles ni dans `auth.users`, l'autre utilisateur intact.
 
 ## 7. Journaux, secrets, dépendances
@@ -115,12 +115,30 @@ personnelles ni dans `auth.users`, l'autre utilisateur intact.
   mot de passe, jeton, cookie, texte de journal, raison, lettre, contexte ou contact. Les pages
   d'erreur client ne journalisent que le `digest`.
 - Variables : `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (clé publiable,
-  conçue pour le navigateur), `NEXT_PUBLIC_SITE_URL`. **Aucun secret serveur n'est utilisé** (pas
-  de clé `service_role` / `sb_secret_`). `.env*` ignoré par git sauf `.env.example` (sans valeur) ;
+  conçue pour le navigateur), `NEXT_PUBLIC_SITE_URL`. Seul secret serveur : `ANTHROPIC_API_KEY` (facultatif, lu à
+  l'exécution par `src/lib/ai/anthropic-provider.ts`, module `server-only`, jamais `NEXT_PUBLIC_*`).
+  Pas de clé `service_role` / `sb_secret_`. `.env*` ignoré par git sauf `.env.example` (sans valeur) ;
   aucun fichier de secret suivi.
 - Dépendances d'exécution : Next.js, React, `@supabase/ssr` / `supabase-js`, Radix UI,
-  `lucide-react`, Recharts, Zod, `cn` (paquet officiel shadcn, fusion de classes). Aucun outil
-  d'analytique, de relecture de session, de publicité ni d'IA.
+  `lucide-react`, Recharts, Zod, `cn` (paquet officiel shadcn, fusion de classes),
+  `@anthropic-ai/sdk` (côté serveur, bilans intelligents opt-in). Aucun outil d'analytique, de
+  relecture de session ni de publicité.
+- IA : journaux limités à `request_id`, modèle, `stop_reason`, latence, jetons ; jamais le prompt,
+  le jeu de données, la réponse ni le journal (`docs/AI.md`).
+
+## 7 bis. Bilans intelligents et rapport PDF (Sprint 12)
+
+- `ai_preferences` : RLS propriétaire ; droits de colonnes (insert / update des préférences
+  seulement, jamais `generations_count` / `generations_date`). `ai_reflections` : lecture et
+  suppression seulement ; écriture par `save_ai_reflection()`.
+- `reserve_ai_generation()` / `save_ai_reflection()` : SECURITY DEFINER sans paramètre
+  d'utilisateur (`auth.uid()`), `search_path = ''`, consentement actif exigé, 3 générations / jour,
+  non exécutables par `anon`. Tests : `supabase/tests/ai_rls.sql` (20 vérifications).
+- Contrôles AVANT réservation (consentement, clé, données suffisantes) ; aucun appel au fournisseur
+  sans consentement (vérifié en intégration avec un faux fournisseur local).
+- Rapport `/reports/personal` : session + onboarding, RLS, `Cache-Control: private, no-store`,
+  `X-Robots-Tag: noindex`, jamais la lettre ni les contacts.
+- Aucun accomplissement attribué pendant un rendu GET ou un préchargement (ADR-089).
 
 ## 8. En-têtes HTTP (`src/config/security-headers.ts`, appliqués par `next.config.ts`)
 

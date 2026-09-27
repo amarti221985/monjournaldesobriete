@@ -61,7 +61,7 @@ export function DeleteAccountSection() {
               <div className="grid gap-2 rounded-xl bg-muted/60 p-3">
                 <p className="font-medium">Exporter mes données d&apos;abord</p>
                 <p className="text-muted-foreground">Facultatif : garde une copie de tes informations avant de continuer.</p>
-                <ExportButton variant="outline" />
+                <ExportButton variant="outline" label="Exporter mes données" />
               </div>
               <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                 <Button type="button" variant="outline" onClick={() => close(false)}>

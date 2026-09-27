@@ -45,12 +45,21 @@ Règles essentielles :
   lettre / rappel / notes jamais journalisés ni dans une URL.
 - Accomplissements : événements historiques persistés, jamais retirés ; attribution UNIQUEMENT via la
   RPC `award_achievements()` (aucune écriture client sur `user_achievements`) aux points prévus
-  (check-in, moment d'envie, plan, `/achievements`) ; métriques = mêmes définitions que les Sprints 4/7 ;
+  (check-in, moment d'envie, plan, bouton « Enregistrer mes jalons ») ; métriques = mêmes définitions que les Sprints 4/7 ;
   jamais de récompense liée à la consommation, d'XP, de niveau ni de classement.
 - Sécurité (Sprint 11, voir `docs/SECURITY.md` / `docs/PRIVACY.md`) : nouvelle table personnelle →
   `user_id` + RLS + clé composite vers le parent + `ON DELETE CASCADE` (vérifier `security_rls.sql`,
   mettre à jour la carte des données et l'export) ; jamais de `service_role` ; SECURITY DEFINER
-  seulement sans paramètre `user_id` ; en-têtes dans `next.config.ts` ; Sprint 10 reporté ; aucune IA.
+  seulement sans paramètre `user_id` ; en-têtes dans `next.config.ts` ; Sprint 10 reporté.
+- IA (`docs/AI.md`) : opt-in (`ai_preferences`), rien n'est envoyé sans consentement ET clic ;
+  jeu de données via `buildWeeklyInsightDataset` seulement (jamais lettre, contacts, lieux, rappel,
+  raison, notes, courriel, UUID) ; métriques calculées par le code ; sortie validée par
+  `validateWeeklyReflection` ; écriture par `reserve_ai_generation` / `save_ai_reflection` ; clé
+  `ANTHROPIC_API_KEY` serveur seulement ; ne jamais journaliser prompt, jeu de données ni réponse ;
+  aucun diagnostic, prédiction, causalité, jugement ni chatbot.
+- Accomplissements : jamais attribués pendant un rendu GET (ADR-089).
+- Rapport PDF (`docs/PDF_EXPORT.md`) : page imprimable `(report)`, `no-store` + `noindex`, jamais
+  la lettre ni les contacts ; aucun service PDF tiers.
 - Calendrier : champs minimaux seulement ; journal : `search_journal` (côté base, paginé) ; le terme
   recherché ne va jamais dans l'URL ni dans les journaux.
 - Chemins via `src/config/routes.ts` ; redirections via `getSafeRedirect()`.

@@ -6,7 +6,7 @@ Webapp de journal de sobriété : check-in quotidien, suivi des envies et décle
 réflexions, visualisation de la progression. Outil de journalisation et de suivi personnel —
 il ne remplace pas les conseils ou soins d'un professionnel de la santé.
 
-État : **Sprint 11 — sécurité, confidentialité et contrôle des données** (Sprint 10 reporté) (voir [docs/PROJECT.md](docs/PROJECT.md)).
+État : **Sprint 12 — bilans intelligents (IA opt-in) et rapport PDF** (Sprint 10 reporté) (voir [docs/PROJECT.md](docs/PROJECT.md)).
 
 ## Stack
 
@@ -38,6 +38,8 @@ cp .env.example .env.local
 | `NEXT_PUBLIC_SUPABASE_URL` | Oui* | URL du projet Supabase (`https://<ref>.supabase.co`) |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Oui* | Clé publiable Supabase (`sb_publishable_...`) |
 | `NEXT_PUBLIC_SITE_URL` | En production | URL publique de l'app (défaut `http://localhost:3000`). Sert à construire les liens des courriels d'authentification. |
+| `ANTHROPIC_API_KEY` | Non | Clé **serveur** du fournisseur d'IA. Sans elle, les bilans intelligents sont indisponibles et rien n'est envoyé. Jamais `NEXT_PUBLIC_`. |
+| `AI_MODEL` | Non | Modèle utilisé pour les bilans (défaut `claude-opus-5`). |
 
 \* Validées au premier usage d'un client Supabase (`src/lib/env.ts`) : le build et la page
 d'accueil fonctionnent sans elles, mais l'authentification et l'espace personnel affichent
@@ -128,4 +130,7 @@ Aucune dépendance à Vercel : l'app est un serveur Node standard.
 - [docs/DATABASE.md](docs/DATABASE.md) — principes de base de données, migrations, RLS, dates
 - [docs/DECISIONS.md](docs/DECISIONS.md) — journal des décisions d'architecture (ADR)
 - [docs/SUPABASE_SETUP.md](docs/SUPABASE_SETUP.md) — configuration Supabase (Auth, URLs, courriels)
+- [docs/SECURITY.md](docs/SECURITY.md) / [docs/PRIVACY.md](docs/PRIVACY.md) — sécurité, carte des données
+- [docs/AI.md](docs/AI.md) — bilans intelligents (consentement, minimisation, garde-fous)
+- [docs/PDF_EXPORT.md](docs/PDF_EXPORT.md) — rapport PDF
 - [docs/MASTER_PROMPT.md](docs/MASTER_PROMPT.md) — cahier des charges maître

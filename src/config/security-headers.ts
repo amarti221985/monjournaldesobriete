@@ -38,3 +38,12 @@ export const securityHeaders: { key: string; value: string }[] = [
   { key: "X-Frame-Options", value: "DENY" },
   ...(isDevelopment ? [] : [{ key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" }]),
 ];
+
+/**
+ * Pages contenant des données personnelles imprimables (rapport PDF, ADR-088) : jamais
+ * mises en cache (navigateur, proxy) ni indexées.
+ */
+export const privateDocumentHeaders: { key: string; value: string }[] = [
+  { key: "Cache-Control", value: "private, no-store, max-age=0" },
+  { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
+];

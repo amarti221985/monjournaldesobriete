@@ -1,4 +1,4 @@
-import { TrendingUp } from "lucide-react";
+import { Sparkles, TrendingUp } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -109,7 +109,18 @@ export default async function ProgressPage({ searchParams }: PageProps<"/progres
 
   return (
     <PageContainer size="wide">
-      <PageHeader title={TITLE} description={SUBTITLE} />
+      <PageHeader
+        title={TITLE}
+        description={SUBTITLE}
+        actions={
+          <Button asChild variant="outline">
+            <Link href={routes.insights}>
+              <Sparkles data-icon="inline-start" aria-hidden="true" />
+              Mes bilans
+            </Link>
+          </Button>
+        }
+      />
 
       <div className="grid gap-2">
         <PeriodSelector current={period} />

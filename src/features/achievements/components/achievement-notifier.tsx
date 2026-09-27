@@ -104,12 +104,3 @@ export function AchievementNotifierProvider({ children }: { children: ReactNode 
     </AchievementNotifierContext.Provider>
   );
 }
-
-/** Pour une attribution faite au rendu serveur (page) : affiche la notification une fois. */
-export function AchievementNotice({ result }: { result: NotifyInput }) {
-  const notify = useAchievementNotifier();
-  useEffect(() => {
-    notify(result);
-  }, [notify, result]);
-  return null;
-}

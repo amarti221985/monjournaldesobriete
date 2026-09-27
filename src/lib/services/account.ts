@@ -108,7 +108,7 @@ const SUBSTANCE = "user_substances ( custom_name, substances ( name_fr ) )";
  */
 export async function collectExportData(userId: string): Promise<ExportSource> {
   const supabase = await createClient();
-  const [auth, profile, substances, reasons, motivations, contacts, checkins, cravings, triggers, strategies, places, reminder, letter, achievements] =
+  const [auth, profile, substances, reasons, motivations, contacts, checkins, cravings, triggers, strategies, places, reminder, letter, achievements, aiPreferences, aiReflections] =
     await Promise.all([
       supabase.auth.getUser(),
       supabase.from("profiles").select("display_name, timezone, onboarding_completed, created_at").eq("id", userId).maybeSingle(),
@@ -164,9 +164,19 @@ export async function collectExportData(userId: string): Promise<ExportSource> {
         .select("earned_at, achievement_definitions ( slug, name_fr, category )")
         .eq("user_id", userId)
         .order("earned_at"),
+      supabase
+        .from("ai_preferences")
+        .select("ai_enabled, include_reflections, include_consumption_context, include_craving_context, consented_at, consent_version, revoked_at")
+        .eq("user_id", userId)
+        .maybeSingle(),
+      supabase
+        .from("ai_reflections")
+        .select("period_start, period_end, type, summary, content, model, prompt_version, generated_at")
+        .eq("user_id", userId)
+        .order("period_end"),
     ]);
 
-  const failed = [profile, substances, reasons, motivations, contacts, checkins, cravings, triggers, strategies, places, reminder, letter, achievements].find(
+  const failed = [profile, substances, reasons, motivations, contacts, checkins, cravings, triggers, strategies, places, reminder, letter, achievements, aiPreferences, aiReflections].find(
     (result) => result.error,
   );
   if (failed?.error) {
@@ -189,6 +199,8 @@ export async function collectExportData(userId: string): Promise<ExportSource> {
     reminder: reminder.data,
     letter: letter.data,
     achievements: achievements.data ?? [],
+    aiPreferences: aiPreferences.data,
+    aiReflections: aiReflections.data ?? [],
   };
 }
 

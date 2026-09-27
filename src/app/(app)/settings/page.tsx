@@ -1,9 +1,11 @@
-import { ShieldCheck } from "lucide-react";
+import { ShieldCheck, Sparkles } from "lucide-react";
 import type { Metadata } from "next";
+import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { routes } from "@/config/routes";
 import { siteConfig } from "@/config/site";
@@ -16,9 +18,12 @@ import {
   SessionControls,
   TimezoneForm,
 } from "@/features/settings/components/settings-forms";
+import { AiPreferencesForm } from "@/features/insights/components/ai-controls";
+import { ReportOptionsForm } from "@/features/reports/components/report-options-form";
 import { requireUser } from "@/lib/auth/session";
 import { formatLongDate } from "@/lib/dates";
 import { getAccountOverview } from "@/lib/services/account";
+import { getAiPreferences, listAiReflections } from "@/lib/services/ai";
 import { getCurrentProfile } from "@/lib/services/profiles";
 
 export const metadata: Metadata = {
@@ -51,8 +56,13 @@ function timezoneOptions(current: string): string[] {
  * Server Action qui dérive l'utilisateur de la session.
  */
 export default async function SettingsPage() {
-  await requireUser(routes.settings);
-  const [profile, account] = await Promise.all([getCurrentProfile(), getAccountOverview()]);
+  const user = await requireUser(routes.settings);
+  const [profile, account, aiPreferences, aiReflections] = await Promise.all([
+    getCurrentProfile(),
+    getAccountOverview(),
+    getAiPreferences(user.id),
+    listAiReflections(user.id, 1),
+  ]);
   const timezone = profile?.timezone ?? siteConfig.defaultTimeZone;
 
   return (
@@ -92,11 +102,16 @@ export default async function SettingsPage() {
       </Section>
 
       <Section id="donnees" title="Mes données" description="Tu peux télécharger une copie des informations que tu as enregistrées dans l'application.">
-        <ExportButton />
-        <p className="text-xs text-pretty text-muted-foreground">
-          Format JSON : ton compte, ton parcours, tes check-ins, tes moments d&apos;envie, ton plan et tes accomplissements.
-          Garde ce fichier en lieu sûr : il contient des informations personnelles.
-        </p>
+        <div className="grid gap-2">
+          <h3 className="text-sm font-semibold">Export JSON</h3>
+          <p className="text-sm text-muted-foreground">Une copie complète et structurée de tes données.</p>
+          <ExportButton />
+        </div>
+        <div className="grid gap-2 border-t pt-6">
+          <h3 className="text-sm font-semibold">Rapport PDF</h3>
+          <p className="text-sm text-muted-foreground">Une version lisible de ton parcours, de tes check-ins et de ta progression.</p>
+          <ReportOptionsForm aiAvailable={aiPreferences.aiEnabled} />
+        </div>
       </Section>
 
       <Section id="confidentialite" title="Confidentialité">
@@ -110,14 +125,36 @@ export default async function SettingsPage() {
           </p>
           <p>Aucun outil publicitaire ni de mesure d&apos;audience n&apos;est utilisé.</p>
           <p>
-            Les fonctions IA ne sont pas actuellement activées : ton journal n&apos;est envoyé à aucun fournisseur
-            d&apos;intelligence artificielle. Si de telles fonctions arrivent, elles demanderont ton accord explicite.
+            Ton journal n&apos;est envoyé à un fournisseur d&apos;intelligence artificielle que si tu actives les bilans
+            intelligents et que tu demandes un bilan. Ta lettre et tes personnes de soutien ne sont jamais envoyées.
           </p>
           <p className="text-muted-foreground">
             Tes données sont conservées tant que tu ne les supprimes pas ou que tu ne supprimes pas ton compte.
             Hébergement technique : Supabase (base de données et authentification) et Hostinger (application).
           </p>
         </div>
+      </Section>
+
+      <Section id="intelligence" title="Intelligence et confidentialité" description="Les bilans intelligents sont facultatifs et désactivés par défaut.">
+        {aiPreferences.aiEnabled ? (
+          <AiPreferencesForm preferences={aiPreferences} hasReflections={aiReflections.length > 0} />
+        ) : (
+          <div className="grid gap-3 text-sm text-pretty">
+            <p>
+              Bilans intelligents : <span className="font-medium">désactivés</span>. Aucune donnée n&apos;est envoyée à un
+              fournisseur d&apos;IA.
+            </p>
+            {aiReflections.length > 0 ? (
+              <p className="text-muted-foreground">Tes bilans précédents sont conservés ; tu peux les consulter ou les supprimer dans « Mes bilans ».</p>
+            ) : null}
+          </div>
+        )}
+        <Button asChild variant="outline" className="justify-self-start">
+          <Link href={routes.insights}>
+            <Sparkles data-icon="inline-start" aria-hidden="true" />
+            Ouvrir Mes bilans
+          </Link>
+        </Button>
       </Section>
 
       <Section id="zone-sensible" title="Zone sensible">

@@ -180,7 +180,7 @@ export function SessionControls() {
 // --- Mes données ----------------------------------------------------------------------
 
 /** Télécharge l'export JSON (POST même origine) ; bouton désactivé pendant la préparation. */
-export function ExportButton({ variant = "default" }: { variant?: "default" | "outline" }) {
+export function ExportButton({ variant = "default", label = "Télécharger mes données" }: { variant?: "default" | "outline"; label?: string }) {
   const [status, setStatus] = useState<"idle" | "pending" | "done" | "error">("idle");
   const [message, setMessage] = useState<string | null>(null);
 
@@ -216,7 +216,7 @@ export function ExportButton({ variant = "default" }: { variant?: "default" | "o
     <div className="grid gap-3">
       <Button type="button" variant={variant} onClick={download} disabled={status === "pending"} className="justify-self-start">
         <Download data-icon="inline-start" aria-hidden="true" />
-        {status === "pending" ? "Préparation…" : "Exporter mes données"}
+        {status === "pending" ? "Préparation…" : label}
       </Button>
       <p aria-live="polite" className="text-sm text-muted-foreground">
         {message}

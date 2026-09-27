@@ -89,6 +89,96 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_preferences: {
+        Row: {
+          ai_enabled: boolean
+          consent_version: string | null
+          consented_at: string | null
+          created_at: string
+          generations_count: number
+          generations_date: string | null
+          include_consumption_context: boolean
+          include_craving_context: boolean
+          include_reflections: boolean
+          revoked_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ai_enabled?: boolean
+          consent_version?: string | null
+          consented_at?: string | null
+          created_at?: string
+          generations_count?: number
+          generations_date?: string | null
+          include_consumption_context?: boolean
+          include_craving_context?: boolean
+          include_reflections?: boolean
+          revoked_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ai_enabled?: boolean
+          consent_version?: string | null
+          consented_at?: string | null
+          created_at?: string
+          generations_count?: number
+          generations_date?: string | null
+          include_consumption_context?: boolean
+          include_craving_context?: boolean
+          include_reflections?: boolean
+          revoked_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      ai_reflections: {
+        Row: {
+          content: Json
+          created_at: string
+          generated_at: string
+          id: string
+          model: string | null
+          period_end: string
+          period_start: string
+          prompt_version: string
+          provider: string | null
+          summary: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          content: Json
+          created_at?: string
+          generated_at?: string
+          id?: string
+          model?: string | null
+          period_end: string
+          period_start: string
+          prompt_version: string
+          provider?: string | null
+          summary: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          content?: Json
+          created_at?: string
+          generated_at?: string
+          id?: string
+          model?: string | null
+          period_end?: string
+          period_start?: string
+          prompt_version?: string
+          provider?: string | null
+          summary?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       checkin_achievements: {
         Row: {
           achievement_type_id: string
@@ -1117,6 +1207,19 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      reserve_ai_generation: { Args: never; Returns: number }
+      save_ai_reflection: {
+        Args: {
+          p_content: Json
+          p_model: string
+          p_period_end: string
+          p_period_start: string
+          p_prompt_version: string
+          p_provider: string
+          p_summary: string
+        }
+        Returns: string
       }
       save_checkin: {
         Args: { finalize?: boolean; payload: Json }

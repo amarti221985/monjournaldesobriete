@@ -13,6 +13,10 @@ export const routes = {
   accountDeleted: "/account-deleted",
   // Export des données (Route Handler, POST même origine)
   accountExport: "/api/account/export",
+  // Rapport imprimable « Mon parcours » (Sprint 12)
+  personalReport: "/reports/personal",
+  // Bilans intelligents (Sprint 12)
+  insights: "/insights",
   // Onboarding (Sprint 2)
   onboarding: "/onboarding",
   // Application authentifiée
@@ -44,6 +48,8 @@ export const protectedRoutePrefixes: readonly string[] = [
   routes.progress,
   routes.craving,
   routes.achievements,
+  routes.insights,
+  "/reports",
   routes.plan,
   routes.settings,
 ];

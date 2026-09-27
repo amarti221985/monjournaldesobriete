@@ -8,17 +8,11 @@ import { StatusMessage } from "@/components/shared/status-message";
 import { routes } from "@/config/routes";
 import { siteConfig } from "@/config/site";
 import { AchievementCard } from "@/features/achievements/components/achievement-card";
-import { AchievementNotice } from "@/features/achievements/components/achievement-notifier";
+import { ReconcileAchievements } from "@/features/achievements/components/reconcile-achievements";
 import { categoryLabels } from "@/features/achievements/constants";
 import { buildAchievementViews, groupByCategory, selectNextSteps, type AchievementView } from "@/features/achievements/logic";
 import { requireUser } from "@/lib/auth/session";
-import {
-  awardAchievements,
-  getAchievementDefinitions,
-  getAchievementProgress,
-  getEarnedAchievements,
-  type AwardResult,
-} from "@/lib/services/achievements";
+import { getAchievementDefinitions, getAchievementProgress, getEarnedAchievements } from "@/lib/services/achievements";
 import { getCurrentProfile } from "@/lib/services/profiles";
 
 export const metadata: Metadata = {
@@ -29,18 +23,16 @@ const TITLE = "Mes accomplissements";
 const SUBTITLE = "Chaque étape compte. Retrouve ici les jalons que tu as atteints au fil de ton parcours.";
 
 /**
- * Accomplissements. À l'ouverture, une évaluation idempotente (filet de sécurité) corrige
- * toute attribution manquée AVANT l'affichage : jamais « 72 / 60 non obtenu ».
+ * Accomplissements (lecture seule, ADR-089) : l'affichage n'attribue rien. Les jalons atteints
+ * mais pas encore enregistrés sont signalés (statut « atteint ») et enregistrés sur un clic.
  */
 export default async function AchievementsPage() {
   const user = await requireUser(routes.achievements);
   const profile = await getCurrentProfile();
   const timeZone = profile?.timezone ?? siteConfig.defaultTimeZone;
 
-  let award: AwardResult;
   let views: AchievementView[];
   try {
-    award = await awardAchievements();
     const [definitions, stats, earned] = await Promise.all([
       getAchievementDefinitions(),
       getAchievementProgress(),
@@ -57,12 +49,12 @@ export default async function AchievementsPage() {
   }
 
   const earnedCount = views.filter((view) => view.status === "earned").length;
+  const reachedCount = views.filter((view) => view.status === "reached").length;
   const nextSteps = selectNextSteps(views);
   const groups = groupByCategory(views);
 
   return (
     <PageContainer size="wide">
-      <AchievementNotice result={award} />
       <PageHeader title={TITLE} description={SUBTITLE} />
 
       {earnedCount === 0 ? (
@@ -79,6 +71,8 @@ export default async function AchievementsPage() {
           {earnedCount > 1 ? "accomplissements obtenus" : "accomplissement obtenu"}
         </p>
       )}
+
+      {reachedCount > 0 ? <ReconcileAchievements count={reachedCount} /> : null}
 
       <nav aria-label="Catégories">
         <ul className="flex flex-wrap gap-2">

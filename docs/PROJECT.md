@@ -44,7 +44,7 @@ plusieurs substances (alcool, cannabis, nicotine, stimulants, opioïdes, autres)
 | Accomplissements | Continuité et progression cumulative, calculés depuis les données réelles |
 | PWA & notifications | Installation mobile, rappels |
 | Confidentialité | Export (dont PDF), suppression des données et du compte |
-| IA (éventuelle) | Résumés et réflexion guidée, uniquement avec consentement explicite |
+| IA | Bilans hebdomadaires opt-in, minimisés, validés ; aucun chatbot |
 
 ## Roadmap
 
@@ -61,15 +61,20 @@ plusieurs substances (alcool, cannabis, nicotine, stimulants, opioïdes, autres)
 | 8 | Mon plan | ✅ Terminé |
 | 9 | Accomplissements | ✅ Terminé |
 | 10 | PWA et notifications | ⏸ Reporté (après le Sprint 11) |
-| 11 | Sécurité, confidentialité, export et suppression | ✅ Terminé (export JSON ; PDF à venir) |
-| 12 | Fonctionnalités IA éventuelles | À venir |
+| 11 | Sécurité, confidentialité, export et suppression | ✅ Terminé |
+| 12 | Bilans intelligents (IA opt-in), rapport PDF, correction des accomplissements | ✅ Terminé |
 
-### Sprint 11 — export PDF (ajout demandé)
+### Sprint 12 — réalisé
 
-En plus de l'export des données prévu, l'utilisateur pourra **télécharger ses données en PDF** :
-document lisible généré à la demande (journal, check-ins, progression, plan), uniquement pour
-l'utilisateur connecté (session + RLS), sans passer par un service tiers, sans stockage du fichier
-sur le serveur et sans données sensibles dans l'URL. Choix de la période et des sections à inclure.
+- **Rapport PDF** (demandé en cours de projet, livré au Sprint 12) : page imprimable protégée
+  `/reports/personal`, période et sections au choix, PDF produit par le navigateur, sans service
+  tiers ni stockage (`docs/PDF_EXPORT.md`).
+- **Bilans intelligents** `/insights` : opt-in, minimisation, garde-fous, historique, limite de
+  3 / jour (`docs/AI.md`). Nécessite `ANTHROPIC_API_KEY` côté serveur.
+- **Accomplissements** : plus aucune attribution pendant le rendu (ADR-089).
+- Export JSON v2 (bilans IA inclus).
+
+Le **Sprint 10** (PWA, notifications) reste **reporté** et n'est pas implémenté.
 
 Règle : chaque sprint implémente **uniquement son périmètre**, sans développer
 prématurément les fonctionnalités futures.

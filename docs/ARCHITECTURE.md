@@ -513,7 +513,8 @@ Action importante (check-in terminé, moment d'envie terminé, plan modifié)
       → achievement_metric_events(auth.uid())  (métriques SQL, une passe)
       → INSERT … ON CONFLICT DO NOTHING RETURNING  (nouveaux seulement)
   → { awarded, initial } renvoyé au client → useAchievementNotifier() → notification discrète
-/achievements (filet idempotent) · /today (rattrapage unique si aucun accomplissement)
+Rendu de /achievements et /today : LECTURE SEULE (ADR-089). Historique non enregistré →
+  bouton « Enregistrer mes jalons » → reconcileAchievementsAction() (action explicite)
 ```
 
 ### Fichiers
@@ -523,7 +524,7 @@ src/features/achievements/
   constants.ts        catégories, icônes Lucide (par icon_key), libellés de progression
   logic.ts            évaluateurs par catégorie, vues (obtenu / atteint / en cours), prochaines
                       étapes, dates (fuseau), notification regroupée (pur, testé)
-  components/         AchievementNotifierProvider (layout (app)) + AchievementNotice,
+  components/         AchievementNotifierProvider (layout (app)), ReconcileAchievements,
                       AchievementCard, RecentAchievementsCard, MilestonesCard
 src/lib/services/achievements.ts   catalogue, obtenus, progression (RPC), attribution (RPC)
 src/app/(app)/achievements/        page.tsx, loading.tsx
@@ -533,14 +534,14 @@ src/app/(app)/achievements/        page.tsx, loading.tsx
 
 | Vue | Requêtes |
 | --- | --- |
-| `/achievements` | 1 RPC d'attribution puis, en parallèle : catalogue, progression (1 RPC), obtenus |
-| `/today` | +2 lectures (derniers obtenus, catalogue) ; attribution seulement si aucun obtenu |
+| `/achievements` | en parallèle : catalogue, progression (1 RPC), obtenus ; aucune attribution |
+| `/today` | +2 lectures (derniers obtenus, catalogue) ; aucune attribution |
 | `/progress` | +3 lectures (catalogue, progression, obtenus), aucune attribution |
 
 ## Sécurité, confidentialité et contrôle des données (Sprint 11)
 
 Voir [SECURITY.md](./SECURITY.md) (audit, RLS, fonctions, en-têtes, limitations) et
-[PRIVACY.md](./PRIVACY.md) (carte des données, tiers, IA inactive).
+[PRIVACY.md](./PRIVACY.md) (carte des données, tiers, flux IA).
 
 | Élément | Emplacement |
 | --- | --- |
@@ -551,7 +552,35 @@ Voir [SECURITY.md](./SECURITY.md) (audit, RLS, fonctions, en-têtes, limitations
 | En-têtes HTTP (CSP, nosniff, referrer, permissions, HSTS) | `next.config.ts` |
 | Page publique après suppression | `src/app/(marketing)/account-deleted/` |
 
-Accès aux paramètres : sidebar (« Paramètres » activé) et menu du compte. Sprint 10 (PWA /
+Accès aux paramètres : sidebar (« Paramètres » activé) et menu du compte.
+
+## Bilans intelligents et rapport PDF (Sprint 12)
+
+Détails : [AI.md](./AI.md) et [PDF_EXPORT.md](./PDF_EXPORT.md).
+
+```text
+/insights → « Générer mon bilan » → generateWeeklyInsightAction()
+  session → getAiPreferences (consentement) → getConfiguredAiProvider (clé serveur)
+  → getWeeklyPeriod(getUserToday) → collectWeeklyInsightSource (catégories autorisées, RLS)
+  → checkWeeklyInsightPreconditions (avant toute réservation)
+  → reserve_ai_generation() (3 / jour) → buildWeeklyInsightDataset (pur, minimisé)
+  → AiProvider.generateWeeklyReflection → validateWeeklyReflection (schéma + garde-fous)
+  → save_ai_reflection() → revalidatePath
+```
+
+| Élément | Emplacement |
+| --- | --- |
+| Page « Mes bilans », squelette | `src/app/(app)/insights/` |
+| Server Actions (préférences, génération, suppression) et composants | `src/features/insights/` |
+| Cœur IA (schémas, confidentialité, jeu de données, prompt, garde-fous, fournisseur) | `src/lib/ai/` |
+| Accès aux données IA | `src/lib/services/ai.ts` |
+| Rapport imprimable (layout sans navigation, page) | `src/app/(report)/` |
+| Options du rapport, bouton d'impression, formulaire | `src/features/reports/` |
+| Données du rapport | `src/lib/services/report.ts` |
+| En-têtes no-store / noindex du rapport | `privateDocumentHeaders` (`src/config/security-headers.ts`) |
+
+Accès : menu du compte (« Mes bilans »), bouton sur `/progress`, section « Intelligence et
+confidentialité » de `/settings`. Rapport : `/settings` → « Mes données » → « Rapport PDF ». Sprint 10 (PWA /
 notifications) **reporté** : aucun service worker ni cache hors ligne.
 
 ## Conventions de composants

@@ -40,7 +40,8 @@ declare
     ['craving_event_substances', 'user_id'], ['craving_event_emotions', 'user_id'],
     ['craving_event_triggers', 'user_id'], ['craving_interventions', 'user_id'],
     ['user_personal_triggers', 'user_id'], ['user_personal_strategies', 'user_id'], ['safe_places', 'user_id'],
-    ['personal_reminders', 'user_id'], ['self_letters', 'user_id'], ['user_achievements', 'user_id']
+    ['personal_reminders', 'user_id'], ['self_letters', 'user_id'], ['user_achievements', 'user_id'],
+    ['ai_preferences', 'user_id'], ['ai_reflections', 'user_id']
   ];
   -- Une colonne modifiable (droit UPDATE accordé) par table, pour le test de modification.
   v_updatable text[][] := array[
@@ -51,7 +52,7 @@ declare
     ['craving_events', 'outcome_text', 'user_id'], ['craving_interventions', 'helped_text', 'user_id'],
     ['user_personal_triggers', 'notes', 'user_id'], ['user_personal_strategies', 'notes', 'user_id'],
     ['safe_places', 'name', 'user_id'], ['personal_reminders', 'content', 'user_id'],
-    ['self_letters', 'content', 'user_id']
+    ['self_letters', 'content', 'user_id'], ['ai_preferences', 'include_reflections', 'user_id']
   ];
 begin
   insert into auth.users (id, aud, role, email, raw_user_meta_data) values
@@ -88,6 +89,9 @@ begin
     insert into public.personal_reminders (user_id, content) values (v_owner::uuid, 'Rappel fictif.');
     insert into public.self_letters (user_id, content) values (v_owner::uuid, 'Lettre fictive.');
     perform public.award_achievements();
+    insert into public.ai_preferences (user_id, ai_enabled, consented_at, consent_version) values (v_owner::uuid, true, now(), '1');
+    perform public.save_ai_reflection(v_today - 6, v_today, 'Bilan fictif de la semaine.', '{"summary":"Bilan fictif de la semaine."}'::jsonb,
+      'test', 'modele-fictif', 'weekly-reflection-v1');
   end loop;
   select id into v_checkin_b from public.daily_checkins where user_id = user_b;
 
@@ -101,13 +105,13 @@ begin
     if v_count = 0 then raise exception 'ÉCHEC 1 : aucune ligne de A dans %', v_owned[i][1]; end if;
   end loop;
 
-  -- 2. SELECT : A ne lit aucune ligne de B (22 tables)
+  -- 2. SELECT : A ne lit aucune ligne de B (24 tables)
   for i in 1..array_length(v_owned, 1) loop
     execute format('select count(*) from public.%I where %I = $1', v_owned[i][1], v_owned[i][2]) into v_count using user_b;
     if v_count <> 0 then raise exception 'ÉCHEC 2 : A lit % ligne(s) de B dans %', v_count, v_owned[i][1]; end if;
   end loop;
 
-  -- 3. UPDATE : aucune ligne de B modifiée (15 tables modifiables)
+  -- 3. UPDATE : aucune ligne de B modifiée (16 tables modifiables)
   for i in 1..array_length(v_updatable, 1) loop
     execute format('update public.%I set %I = %I where %I = $1', v_updatable[i][1], v_updatable[i][2], v_updatable[i][2], v_updatable[i][3]) using user_b;
     get diagnostics v_count = row_count;

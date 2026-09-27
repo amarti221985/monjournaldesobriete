@@ -53,20 +53,27 @@ Aucune donnée stockée sans usage identifiée.
 | Rappel personnel | `personal_reminders` | `user_id` | oui | oui | oui (cascade) |
 | Lettre à soi-même | `self_letters` | `user_id` | très | oui | oui (cascade) |
 | Accomplissements obtenus | `user_achievements` | `user_id` | faible | oui | oui (cascade) |
+| Préférences et consentement IA | `ai_preferences` | `user_id` | faible | oui (sans compteur) | oui (cascade) |
+| Bilans intelligents (résultat validé seulement) | `ai_reflections` | `user_id` | oui | oui | oui (cascade) |
 | Catalogues | `substances`, `emotions`, `trigger_types`, `achievement_types`, `craving_strategies`, `achievement_definitions` | système | non | libellés utilisés seulement | non (communs) |
 
 ## Stockage et tiers techniques
 
 - **Supabase** : base PostgreSQL et authentification (projet `nnzdossiysgkdcsdutko`).
 - **Hostinger** : hébergement de l'application Node.js (Next.js).
-- Aucun autre service : pas d'analytique, de relecture de session, de publicité, de CDN tiers pour
-  les données, ni d'IA. Polices servies par l'application.
+- **Anthropic** (fournisseur d'IA) : seulement si le serveur a une clé configurée, que
+  l'utilisateur a activé les bilans intelligents et qu'il demande un bilan (voir ci-dessous).
+- Aucun autre service : pas d'analytique, de relecture de session, de publicité ni de CDN tiers
+  pour les données. Polices servies par l'application.
 
 ## Accès, export, suppression
 
-- **Export** : `/settings` → « Exporter mes données » : fichier JSON versionné
+- **Export** : `/settings` → « Télécharger mes données » : fichier JSON versionné (v2, bilans IA inclus)
   (`mes-donnees-AAAA-MM-JJ.json`), généré pour l'utilisateur connecté uniquement, jamais mis en
   cache (ADR-076, ADR-078).
+- **Rapport PDF** : `/settings` → « Rapport PDF » : page imprimable protégée (`no-store`,
+  `noindex`), PDF produit par le navigateur, aucun service tiers ni stockage ; jamais la lettre ni
+  les personnes de soutien (ADR-088, `docs/PDF_EXPORT.md`).
 - **Suppression** : `/settings` → « Supprimer mon compte » : export proposé, saisie de
   « SUPPRIMER » et du mot de passe, suppression définitive du compte et de toutes les données
   personnelles (ADR-077). Aucune période de restauration.
@@ -76,11 +83,23 @@ Aucune donnée stockée sans usage identifiée.
 
 ## Intelligence artificielle
 
-**Aucune donnée personnelle n'est actuellement envoyée à un fournisseur d'IA** et aucune fonction
-IA n'est active (affiché dans les paramètres). Avant toute fonction IA (Sprint 12), il faudra
-définir : les données sélectionnées (minimales), un consentement explicite et révocable, le
-fournisseur et sa localisation, la rétention côté fournisseur, un opt-out, et l'exclusion par
-défaut des données les plus sensibles (lettre, contacts).
+Bilans intelligents (Sprint 12, détail : `docs/AI.md`) — **désactivés par défaut**.
+
+Flux de données :
+
+1. L'utilisateur active la fonction après un écran de consentement (version horodatée) et choisit
+   les catégories de textes autorisées.
+2. Il clique sur « Générer mon bilan » : le serveur lit ses données des 7 derniers jours (RLS),
+   construit un jeu **minimisé** (métriques calculées par le code, libellés de catalogue, textes
+   des seules catégories autorisées, raccourcis) et l'envoie à Anthropic (API, clé côté serveur).
+3. La réponse est validée (schéma strict, garde-fous) ; seul le bilan validé est enregistré dans
+   `ai_reflections`.
+
+**Jamais envoyés** : courriel, nom, identifiants, personnes de soutien, lettre à soi-même, lieux
+sûrs, rappel, raison, notes libres, précisions « Autre », quantités. **Jamais stockés** : prompt,
+jeu de données envoyé, réponse brute. **Jamais journalisés** : prompt, jeu de données, réponse,
+journal. La rétention côté fournisseur suit la politique d'Anthropic pour l'API. Désactivation,
+suppression d'un bilan ou de tous les bilans à tout moment ; tout est supprimé avec le compte.
 
 ## Hors périmètre actuel
 

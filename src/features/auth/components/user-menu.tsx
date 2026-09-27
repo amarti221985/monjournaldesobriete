@@ -1,6 +1,6 @@
 "use client";
 
-import { Award, ChevronDown, LogOut, Settings } from "lucide-react";
+import { Award, ChevronDown, LogOut, Settings, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useTransition } from "react";
 
@@ -55,6 +55,12 @@ export function UserMenu({ displayName, email }: UserMenuProps) {
           <Link href={routes.achievements}>
             <Award aria-hidden="true" />
             Mes accomplissements
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild className="min-h-10">
+          <Link href={routes.insights}>
+            <Sparkles aria-hidden="true" />
+            Mes bilans
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild className="min-h-10">

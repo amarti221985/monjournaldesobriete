@@ -997,3 +997,65 @@ acceptée : on en ajoute une nouvelle qui la remplace (statut « Remplacée par 
 - **Decision** : PWA, service worker, manifeste avancé, notifications Web Push, abonnements,
   préférences de notification, planificateur, VAPID et mode hors ligne ne sont PAS implémentés. Le
   Sprint 11 (sécurité et confidentialité) a été réalisé avant, pour consolider les fondations.
+
+## ADR-082 — L'IA est opt-in, désactivée par défaut, avec consentement versionné
+
+- **Decision** : aucune donnée n'est envoyée à un fournisseur d'IA sans consentement explicite
+  (écran dédié : données utilisées, jamais envoyées, fournisseur, limites) ET sans clic sur
+  « Générer mon bilan ». `ai_preferences` (OFF par défaut), `consented_at` + `consent_version`
+  exigés par la base ; un changement de texte invalide un consentement antérieur. Désactiver
+  (horodaté `revoked_at`) bloque toute génération et conserve les bilans existants.
+
+## ADR-083 — Minimisation : le jeu de données est construit par une fonction pure
+
+- **Decision** : `buildWeeklyInsightDataset` (testée) n'inclut par défaut que des libellés de
+  catalogue, des jours et des nombres calculés par le code. Les textes personnels ne sont ajoutés
+  que par catégorie autorisée (réflexions, contexte de consommation, contexte d'envie), raccourcis.
+  Jamais : courriel, nom, identifiants, contacts de soutien, lettre, lieux, rappel, raison, notes
+  libres, précisions « Autre », quantités.
+
+## ADR-084 — Fournisseur derrière une interface, clé côté serveur uniquement
+
+- **Decision** : interface `AiProvider` ; implémentation Anthropic (SDK officiel, sortie structurée,
+  `server-only`). `ANTHROPIC_API_KEY` / `AI_MODEL` lus à l'exécution côté serveur, jamais
+  `NEXT_PUBLIC_*`. Sans clé, la fonction est indisponible. Journaux limités aux métadonnées
+  techniques. Un refus du modèle est traité comme une erreur (pas de repli côté serveur).
+
+## ADR-085 — Les métriques sont déterministes ; le modèle ne fait que mettre en mots
+
+- **Decision** : le modèle reçoit des métriques déjà calculées (mêmes fonctions que
+  `/progress`) et a l'interdiction de recalculer. Les tendances restent descriptives.
+
+## ADR-086 — Garde-fous déterministes après génération
+
+- **Decision** : aucune sortie n'est enregistrée sans passer `validateWeeklyReflection` : schéma
+  strict, `evidence_keys` présentes dans le jeu envoyé, vocabulaire interdit absent (diagnostic,
+  prédiction, causalité, jugement, injonction). Une seule nouvelle tentative. Pas de chatbot.
+
+## ADR-087 — Seul le résultat validé est conservé ; une période = un bilan
+
+- **Decision** : `ai_reflections` conserve résumé, contenu structuré, période, fournisseur, modèle,
+  version du prompt, date. Jamais le prompt, le jeu de données, les textes envoyés ni la réponse
+  brute. Écriture uniquement par `save_ai_reflection()` (consentement actif) ; régénérer la même
+  période remplace. Limite de 3 générations / jour appliquée par `reserve_ai_generation()` avant
+  l'appel (compteur non modifiable par le client).
+
+## ADR-088 — Le PDF est produit par le navigateur à partir d'une page protégée
+
+- **Decision** : `/reports/personal` (HTML imprimable, `no-store`, `noindex`, titre neutre
+  `mon-parcours-AAAA-MM-JJ`) + « Enregistrer en PDF » du navigateur. Ni service tiers, ni
+  Puppeteer, ni stockage. Période et sections choisies dans `/settings` (URL : période et
+  interrupteurs seulement). La lettre et les personnes de soutien ne sont jamais incluses.
+
+## ADR-089 — Aucun accomplissement n'est attribué pendant un rendu ou un préchargement
+
+- **Decision** : `/today` et `/achievements` lisent seulement. L'attribution reste aux points
+  d'action (fin du check-in, intervention, plan) et, pour l'historique, au bouton explicite
+  « Enregistrer mes jalons » (`reconcileAchievementsAction`) proposé quand des jalons atteints ne
+  sont pas encore enregistrés. Corrige la dette du Sprint 9 (mutation pendant un GET).
+
+## ADR-090 — Export JSON v2 : bilans intelligents inclus
+
+- **Decision** : `export_version: 2` ajoute `ai` (`preferences` sans compteur, `reflections`
+  conservés). Jamais de clé, de prompt ni de réponse brute. Le reste de la structure (ADR-076) est
+  inchangé.

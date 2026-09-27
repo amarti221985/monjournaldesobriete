@@ -231,3 +231,16 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* Impression du rapport « Mon parcours » (Sprint 12) : format choisi dans la boîte
+   d'impression (Lettre ou A4), marges régulières, texte noir sur blanc. */
+@media print {
+  @page {
+    margin: 16mm 14mm;
+  }
+  html,
+  body {
+    background: #fff;
+    color: #000;
+  }
+}

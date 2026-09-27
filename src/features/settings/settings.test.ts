@@ -166,7 +166,7 @@ describe("export des données", () => {
     expect(data.export_version).toBe(EXPORT_VERSION);
     expect(data.exported_at).toBe("2026-09-26T15:00:00.000Z");
     expect(data.timezone).toBe("America/Toronto");
-    expect(Object.keys(data)).toEqual(["export_version", "exported_at", "timezone", "account", "journey", "checkins", "craving_events", "personal_plan", "achievements"]);
+    expect(Object.keys(data)).toEqual(["export_version", "exported_at", "timezone", "account", "journey", "checkins", "craving_events", "personal_plan", "achievements", "ai"]);
   });
 
   it("toutes les catégories : multi-substance, consommations multiples, intervention, plan, lettre, accomplissements", () => {
