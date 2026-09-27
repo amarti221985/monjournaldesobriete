@@ -26,10 +26,10 @@ export const primaryNavigation: readonly NavigationItem[] = [
   { label: "Calendrier", shortLabel: "Calendrier", href: routes.calendar, icon: CalendarDays, available: true },
   { label: "Journal", shortLabel: "Journal", href: routes.journal, icon: BookOpen, available: true },
   { label: "Progression", shortLabel: "Progression", href: routes.progress, icon: TrendingUp, available: true },
-  { label: "Mon plan", shortLabel: "Plan", href: routes.plan, icon: Compass, available: false },
+  { label: "Mon plan", shortLabel: "Plan", href: routes.plan, icon: Compass, available: true },
 ];
 
 /** Navigation secondaire, affichée en bas de la sidebar desktop. */
 export const secondaryNavigation: readonly NavigationItem[] = [
-  { label: "Paramètres", shortLabel: "Paramètres", href: routes.settings, icon: Settings, available: false },
+  { label: "Paramètres", shortLabel: "Paramètres", href: routes.settings, icon: Settings, available: true },
 ];

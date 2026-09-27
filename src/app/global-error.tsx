@@ -15,7 +15,8 @@ type GlobalErrorProps = {
  */
 export default function GlobalError({ error, retry }: GlobalErrorProps) {
   useEffect(() => {
-    console.error(error);
+    // Seulement le digest (jamais le message ni la pile, qui pourraient contenir des données).
+    console.error("Erreur d'affichage", error.digest ?? "sans digest");
   }, [error]);
 
   return (

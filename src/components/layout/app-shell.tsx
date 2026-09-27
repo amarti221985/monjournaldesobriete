@@ -7,6 +7,8 @@ import { MobileNavigation } from "@/components/layout/mobile-navigation";
 type AppShellProps = {
   /** Actions affichées à droite de l'en-tête (ex. menu utilisateur). */
   headerActions?: ReactNode;
+  /** Action mise en avant en haut de la sidebar desktop (ex. « J'ai envie de consommer »). */
+  sidebarAction?: ReactNode;
   children: ReactNode;
 };
 
@@ -14,10 +16,10 @@ type AppShellProps = {
  * Structure de l'application authentifiée :
  * sidebar sur desktop (lg+), barre de navigation inférieure sur mobile.
  */
-export function AppShell({ headerActions, children }: AppShellProps) {
+export function AppShell({ headerActions, sidebarAction, children }: AppShellProps) {
   return (
     <div className="flex min-h-dvh flex-1">
-      <DesktopSidebar />
+      <DesktopSidebar action={sidebarAction} />
       <div className="flex min-w-0 flex-1 flex-col">
         <AppHeader actions={headerActions} />
         {/* Espace réservé à la barre inférieure sur mobile */}

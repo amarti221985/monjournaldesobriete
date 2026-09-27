@@ -16,7 +16,8 @@ type ErrorPageProps = {
 export default function ErrorPage({ error, retry }: ErrorPageProps) {
   useEffect(() => {
     // En production, le message est générique ; le digest permet de retrouver l'erreur dans les logs serveur.
-    console.error(error);
+    // Seulement le digest (jamais le message ni la pile, qui pourraient contenir des données).
+    console.error("Erreur d'affichage", error.digest ?? "sans digest");
   }, [error]);
 
   return (

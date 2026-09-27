@@ -57,12 +57,12 @@ plusieurs substances (alcool, cannabis, nicotine, stimulants, opioïdes, autres)
 | 4 | Dashboard | ✅ Terminé |
 | 5 | Calendrier et journal | ✅ Terminé |
 | 6 | Progression et statistiques | ✅ Terminé |
-| 7 | Mode envie de consommer | À venir |
-| 8 | Mon plan | |
-| 9 | Accomplissements | |
-| 10 | PWA et notifications | |
-| 11 | Sécurité, confidentialité, export (PDF) et suppression | |
-| 12 | Fonctionnalités IA éventuelles | |
+| 7 | Mode envie de consommer | ✅ Terminé |
+| 8 | Mon plan | ✅ Terminé |
+| 9 | Accomplissements | ✅ Terminé |
+| 10 | PWA et notifications | ⏸ Reporté (après le Sprint 11) |
+| 11 | Sécurité, confidentialité, export et suppression | ✅ Terminé (export JSON ; PDF à venir) |
+| 12 | Fonctionnalités IA éventuelles | À venir |
 
 ### Sprint 11 — export PDF (ajout demandé)
 

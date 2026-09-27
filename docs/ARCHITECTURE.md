@@ -30,7 +30,7 @@ src/
     (marketing)/            Pages publiques : accueil (puis confidentialité, conditions)
     (auth)/                 login, signup, forgot-password, reset-password (+ layout)
     (onboarding)/           Wizard d'onboarding (layout sobre + onboarding/)
-    (app)/                  Zone authentifiée : layout (AppShell) + today/, calendar/, journal/, progress/
+    (app)/                  Zone authentifiée : layout (AppShell + CTA envie) + today/, calendar/, journal/, progress/, craving/, plan/, achievements/, settings/
     auth/callback/route.ts  Callback Supabase Auth (confirmation, réinitialisation)
     layout.tsx              Layout racine : police, metadata, providers
     globals.css             Design tokens + Tailwind
@@ -44,6 +44,10 @@ src/
     onboarding/             Wizard : constantes, schémas, logique pure, actions, composants
     checkin/                Check-in quotidien : constantes, schémas, logique, affichage, actions, composants
     progress/               Tableau de bord et Progression : métriques, périodes, analyses, observations (pur, testé), cartes
+    craving/                Mode envie : schémas, minuteur, variation, analyse des stratégies (pur, testé), actions, composants
+    plan/                   Mon plan : schémas, ordre / favoris, panneau rapide (pur, testé), actions par section, composants
+    achievements/           Accomplissements : évaluateurs, vues, prochaines étapes, notification (pur, testé), composants
+    settings/               Paramètres : schémas, export (pur, testé), actions, composants
     calendar/               Calendrier : états, mois, année (pur, testé), composants
     journal/                Journal : filtres, recherche, pagination (pur, testé), actions, composants
     profile/
@@ -62,7 +66,7 @@ src/
     timezone.ts             Validation / détection des fuseaux IANA
     auth/redirects.ts       getSafeRedirect, resolveProxyRedirect (pur, testé)
     auth/session.ts         getCurrentUser, requireUser (server-only)
-    services/               profiles, substances, onboarding, journey, checkins, progress, calendar, journal (server-only)
+    services/               profiles, substances, onboarding, journey, checkins, progress, calendar, journal, craving, plan, achievements, account (server-only)
     dates.ts                Journées locales, date maximale, formatage
     supabase/               Clients navigateur / serveur / proxy
     utils.ts                cn()
@@ -397,6 +401,159 @@ Nombre constant quel que soit le nombre de check-ins. Graphique : une couleur pa
 (`--series-mood`, `--series-energy`, `--series-stress`, `--series-craving`, validées contraste +
 daltonisme), toujours accompagnée du libellé ; animations désactivées.
 
+## Mode « J'ai envie de consommer » (Sprint 7)
+
+### Routes
+
+| Route | Rôle |
+| --- | --- |
+| `/craving` | « Prends un moment » : étape 1 (envie 0–10, substances, émotions, déclencheurs, contexte), reprise d'un moment en cours, 5 interventions récentes, « Ce qui semble t'aider » |
+| `/craving/[id]` | Intervention d'un moment : stratégie → minuteur → réévaluation → « Moment enregistré » (étape relue depuis la base : reprise fiable) |
+| `/craving/history` | Les 100 interventions terminées les plus récentes |
+
+Protégées (préfixe `/craving` dans `protectedRoutePrefixes`, proxy + layout `(app)`).
+
+### CTA global
+
+`CravingCta` (client), rendu par le layout `(app)` : en haut de la sidebar desktop (« J'ai envie de
+consommer ») et dans l'en-tête mobile (« J'ai envie », nom accessible complet), variante secondaire
+calme. S'il existe un moment en cours aujourd'hui : « Continuer mon intervention ». Masqué sur les
+pages `/craving*`. Le layout lit l'identifiant du moment en cours (1 requête légère, lecture seule).
+
+### Fichiers
+
+```text
+src/features/craving/
+  constants.ts        bornes, durées (5 / 10 / 15 / sans), seuil d'analyse, textes (erreur, sécurité)
+  schemas.ts          Zod : moment, stratégie + durée, minuteur, réévaluation
+  logic.ts            minuteur (horodatages), étape courante, réduction initial − final, analyse (pur, testé)
+  actions.ts          Server Actions (démarrer, stratégie, minuteur, terminer, mettre de côté, autre stratégie)
+  components/         CravingCta, CravingStartForm, CravingSession (StrategyStep, ActiveStep,
+                      ReevaluateStep), SupportContacts / PersonalReasons, CravingHistoryList,
+                      StrategyInsights, SafetyNote
+src/lib/services/craving.ts   lectures (relations embarquées) + appels RPC
+src/app/(app)/craving/        page.tsx, [id]/page.tsx, history/page.tsx, loading.tsx
+```
+
+Réutilisés : `ScoreScale` et catalogues du check-in (`getCheckinCatalogues`), `SelectableChip`,
+substances suivies, raison / motivations / contacts du Sprint 2 (`journey.ts`).
+
+### Requêtes
+
+| Vue | Requêtes |
+| --- | --- |
+| `/craving` | fermeture des moments expirés (RPC) puis, en parallèle : substances, catalogues, stratégies, 5 moments terminés (relations embarquées), données d'analyse, moment en cours |
+| `/craving/[id]` | fermeture des moments expirés puis, en parallèle : moment (relations embarquées), stratégies, contacts, raison, motivations |
+
+Aucun N+1 ; nombre de requêtes constant.
+
+## Mon plan personnel (Sprint 8)
+
+Route protégée `/plan` (déjà dans `protectedRoutePrefixes`), entrée « Mon plan » de la navigation
+activée. Données **choisies** par l'utilisateur (≠ `/progress`, données observées ; ADR-064).
+
+### Sections
+
+1. Mon parcours — substances actives, objectif, date de départ (confirmation), principale, ajout,
+   arrêt du suivi (désactivation).
+2. Pourquoi je fais ce changement — raison principale.
+3. Ce qui compte pour moi — motivations (au moins une, précision « Autre »).
+4. Mes déclencheurs — catalogue ou texte personnel + « Ce que je remarque ».
+5. Ce qui peut m'aider — stratégies du catalogue ou personnelles, notes, durée par défaut
+   (aucune / 5 / 10 / 15 / 20), 3 favoris.
+6. Mes personnes de soutien — contacts, Appeler (`tel:`) / Écrire (`mailto:`), personne principale.
+7. Mes lieux sûrs — texte seulement, 3 favoris.
+8. Mon rappel — un rappel principal.
+9. Ma lettre à moi-même — repliée par défaut.
+
+Desktop : sommaire collant (ancres). Mobile : cartes empilées, édition dans la carte.
+
+### Fichiers
+
+```text
+src/features/plan/
+  constants.ts        bornes, durées, favoris max, textes (exemples jamais enregistrés)
+  schemas.ts          Zod (réutilise ceux de l'onboarding : substances, raison, motivations, contacts)
+  logic.ts            ordre (principal / favoris), panneau rapide, options de stratégies du mode envie (pur, testé)
+  actions.ts          une Server Action par section (sauvegarde indépendante)
+  components/         plan-ui (PlanSection, usePlanAction, FormActions, confirmations…),
+                      journey-section, why-sections, triggers-strategies-sections,
+                      people-places-sections, words-sections, quick-support
+src/lib/services/plan.ts      lectures + écritures (RPC ou écritures filtrées par user_id)
+src/app/(app)/plan/           page.tsx (sections en parallèle, indépendantes), loading.tsx
+```
+
+### Intégration au mode envie
+
+- `StrategyStep` : « Tes stratégies » (plan, favoris ★ d'abord, durée par défaut) puis « Autres
+  stratégies » (`groupCravingStrategies`). Une stratégie personnelle est copiée en texte dans
+  l'intervention (l'historique ne dépend pas du plan).
+- `ActiveStep` et l'écran de fin : panneaux repliés `ReminderPanel`, `PersonalReasons`,
+  `SupportContacts` (principale d'abord), `SafePlacesPanel`, `LetterPanel`.
+- `/craving` : `QuickSupportCard` « Ce qui peut m'aider maintenant » si des favoris existent.
+
+### Requêtes
+
+| Vue | Requêtes |
+| --- | --- |
+| `/plan` | 12 lectures légères en parallèle (`Promise.allSettled`), aucune N+1 |
+| `/craving`, `/craving/[id]` | + 4 lectures du plan en parallèle, facultatives |
+
+## Accomplissements et jalons (Sprint 9)
+
+Route protégée `/achievements` (préfixe dans `protectedRoutePrefixes`). Pas de 6e entrée dans la
+barre du bas : accès depuis `/today` (« Derniers accomplissements »), `/progress` (« Jalons ») et le
+menu du compte (« Mes accomplissements »).
+
+### Flux
+
+```text
+Action importante (check-in terminé, moment d'envie terminé, plan modifié)
+  → Server Action → awardAchievements() → RPC award_achievements() (SECURITY DEFINER, sans paramètre)
+      → achievement_metric_events(auth.uid())  (métriques SQL, une passe)
+      → INSERT … ON CONFLICT DO NOTHING RETURNING  (nouveaux seulement)
+  → { awarded, initial } renvoyé au client → useAchievementNotifier() → notification discrète
+/achievements (filet idempotent) · /today (rattrapage unique si aucun accomplissement)
+```
+
+### Fichiers
+
+```text
+src/features/achievements/
+  constants.ts        catégories, icônes Lucide (par icon_key), libellés de progression
+  logic.ts            évaluateurs par catégorie, vues (obtenu / atteint / en cours), prochaines
+                      étapes, dates (fuseau), notification regroupée (pur, testé)
+  components/         AchievementNotifierProvider (layout (app)) + AchievementNotice,
+                      AchievementCard, RecentAchievementsCard, MilestonesCard
+src/lib/services/achievements.ts   catalogue, obtenus, progression (RPC), attribution (RPC)
+src/app/(app)/achievements/        page.tsx, loading.tsx
+```
+
+### Requêtes
+
+| Vue | Requêtes |
+| --- | --- |
+| `/achievements` | 1 RPC d'attribution puis, en parallèle : catalogue, progression (1 RPC), obtenus |
+| `/today` | +2 lectures (derniers obtenus, catalogue) ; attribution seulement si aucun obtenu |
+| `/progress` | +3 lectures (catalogue, progression, obtenus), aucune attribution |
+
+## Sécurité, confidentialité et contrôle des données (Sprint 11)
+
+Voir [SECURITY.md](./SECURITY.md) (audit, RLS, fonctions, en-têtes, limitations) et
+[PRIVACY.md](./PRIVACY.md) (carte des données, tiers, IA inactive).
+
+| Élément | Emplacement |
+| --- | --- |
+| Paramètres (compte, sécurité, données, confidentialité, zone sensible) | `src/app/(app)/settings/`, `src/features/settings/` |
+| Export JSON versionné (POST même origine, no-store) | `src/app/api/account/export/route.ts`, `src/features/settings/export.ts` |
+| Compte (nom, fuseau, courriel, mot de passe, sessions, export, suppression) | `src/lib/services/account.ts` |
+| Même origine, limite de fréquence | `src/lib/security/request.ts` |
+| En-têtes HTTP (CSP, nosniff, referrer, permissions, HSTS) | `next.config.ts` |
+| Page publique après suppression | `src/app/(marketing)/account-deleted/` |
+
+Accès aux paramètres : sidebar (« Paramètres » activé) et menu du compte. Sprint 10 (PWA /
+notifications) **reporté** : aucun service worker ni cache hors ligne.
+
 ## Conventions de composants
 
 - Fichiers en `kebab-case.tsx`, composants en `PascalCase`, exports nommés (sauf fichiers
@@ -463,7 +620,22 @@ daltonisme), toujours accompagnée du libellé ; animations désactivées.
   fuseau (minuit, mois, année, DST), journées manquantes, séries de scores, comparaison en points,
   stabilité, fréquences, associations, jours de semaine, consommation multi-substance, seuils et
   formulations des observations.
-- SQL : `supabase/tests/profiles_rls.sql`, `onboarding_rls.sql`, `checkins_rls.sql` et
-  `journal_rls.sql` (RLS, triggers, RPC ; voir DATABASE.md).
+- Sprint 7 : bornes 0–10 (−1 / 11 refusés), multi-substance, « Je ne sais pas », stratégie personnelle,
+  durées, minuteur (démarrage, rafraîchissement, veille, expiration, pause / reprise, fin anticipée),
+  journée locale 23:58 → 00:08, étape courante, réduction initial − final (baisse, égalité, hausse),
+  analyse des stratégies (moyenne 2,33 → « 2,3 points », seuil de 3), formulations.
+- Sprint 8 : schémas du plan (dates, motivations ≥ 1, « Autre », durées, contacts, lieux sans
+  coordonnées, rappel, lettre), favoris et personne principale en premier, limite de favoris, panneau
+  rapide, groupes « Tes stratégies » / « Autres stratégies ».
+- Sprint 9 : jalons cumulatifs (65 → jusqu'à 60), séries (31 → 7 / 14 / 30), check-ins (103 → jusqu'à
+  100), réflexions, journées avec déclencheur, interventions, stratégies distinctes, persistance
+  (état actuel inférieur → toujours obtenu, jamais « 72 / 60 »), prochaines étapes diversifiées,
+  fuseau des dates, notifications regroupées et synthèse du rattrapage.
+- Sprint 11 : paramètres (fuseau, courriel, nom, mot de passe, « SUPPRIMER »), affectation de masse,
+  charges trop longues, même origine, limite de fréquence, redirections ouvertes (formes encodées),
+  en-têtes de sécurité, structure et contenu de l'export (aucun jeton ni identifiant).
+- SQL : `supabase/tests/profiles_rls.sql`, `onboarding_rls.sql`, `checkins_rls.sql`,
+  `journal_rls.sql`, `craving_rls.sql`, `plan_rls.sql`, `achievements_rls.sql` et `security_rls.sql`
+  (RLS, triggers, RPC, suppression de compte ; voir DATABASE.md).
 - Priorité future : séries, statistiques, dates locales/fuseaux, validation, RLS.
 - Playwright (tests de parcours) sera ajouté quand les premiers parcours existeront.

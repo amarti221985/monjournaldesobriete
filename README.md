@@ -6,7 +6,7 @@ Webapp de journal de sobriété : check-in quotidien, suivi des envies et décle
 réflexions, visualisation de la progression. Outil de journalisation et de suivi personnel —
 il ne remplace pas les conseils ou soins d'un professionnel de la santé.
 
-État : **Sprint 6 — progression et analyses** (voir [docs/PROJECT.md](docs/PROJECT.md)).
+État : **Sprint 11 — sécurité, confidentialité et contrôle des données** (Sprint 10 reporté) (voir [docs/PROJECT.md](docs/PROJECT.md)).
 
 ## Stack
 
@@ -91,6 +91,10 @@ npx supabase db query --linked -f supabase/tests/profiles_rls.sql
 npx supabase db query --linked -f supabase/tests/onboarding_rls.sql
 npx supabase db query --linked -f supabase/tests/checkins_rls.sql
 npx supabase db query --linked -f supabase/tests/journal_rls.sql
+npx supabase db query --linked -f supabase/tests/craving_rls.sql
+npx supabase db query --linked -f supabase/tests/plan_rls.sql
+npx supabase db query --linked -f supabase/tests/achievements_rls.sql
+npx supabase db query --linked -f supabase/tests/security_rls.sql
 ```
 Schéma et conventions : [docs/DATABASE.md](docs/DATABASE.md).
 

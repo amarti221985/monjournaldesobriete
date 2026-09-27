@@ -130,9 +130,12 @@ begin
   update public.support_contacts set name = 'Pirate' where user_id = user_a;
   get diagnostics v_count = row_count;
   if v_count <> 0 then raise exception 'ÉCHEC 16 : B a modifié un contact de A'; end if;
-  delete from public.user_substances where user_id = user_a;
-  get diagnostics v_count = row_count;
-  if v_count <> 0 then raise exception 'ÉCHEC 16 : B a supprimé une substance de A'; end if;
+  -- Sprint 11 : plus aucune suppression directe de substance (désactivation seulement).
+  begin
+    delete from public.user_substances where user_id = user_a;
+    raise exception 'ÉCHEC 16 : B a pu supprimer une substance de A';
+  exception when insufficient_privilege then null;
+  end;
 
   -- 17. B ne peut pas créer de ligne au nom de A
   begin

@@ -2,6 +2,10 @@ import type { Metadata } from "next";
 
 import { LoadError } from "@/components/shared/load-error";
 import { routes } from "@/config/routes";
+import { siteConfig } from "@/config/site";
+import { AchievementNotice } from "@/features/achievements/components/achievement-notifier";
+import { RecentAchievementsCard } from "@/features/achievements/components/achievement-summaries";
+import { RECENT_ACHIEVEMENTS_LIMIT } from "@/features/achievements/constants";
 import { TodayCheckinCard } from "@/features/checkin/components/today-checkin-card";
 import { GoalCard } from "@/features/progress/components/goal-card";
 import { InsightsCard } from "@/features/progress/components/insights-card";
@@ -16,6 +20,13 @@ import { getCheckinForDate } from "@/lib/services/checkins";
 import { getPrimaryReason, getTrackedSubstances, getUserMotivations } from "@/lib/services/journey";
 import { getCurrentProfile } from "@/lib/services/profiles";
 import { getCompletedCheckinsForProgress } from "@/lib/services/progress";
+import {
+  awardAchievements,
+  countEarnedAchievements,
+  getAchievementDefinitions,
+  getEarnedAchievements,
+  type AwardResult,
+} from "@/lib/services/achievements";
 
 export const metadata: Metadata = {
   title: "Aujourd'hui",
@@ -25,6 +36,21 @@ export const metadata: Metadata = {
 async function loadDashboard(userId: string, today: string): Promise<DashboardData | null> {
   try {
     return buildDashboard(today, await getCompletedCheckinsForProgress(userId));
+  } catch {
+    return null;
+  }
+}
+
+/** Derniers accomplissements ; une erreur masque simplement la carte. */
+async function loadRecentAchievements(userId: string) {
+  try {
+    let award: AwardResult | null = null;
+    if ((await countEarnedAchievements(userId)) === 0) award = await awardAchievements();
+    const [earned, definitions] = await Promise.all([
+      getEarnedAchievements(userId, RECENT_ACHIEVEMENTS_LIMIT),
+      getAchievementDefinitions(),
+    ]);
+    return { earned, definitions, award };
   } catch {
     return null;
   }
@@ -49,11 +75,16 @@ export default async function TodayPage() {
     loadDashboard(user.id, today),
   ]);
 
+  // Rattrapage unique de l'historique (Sprint 9) : seulement tant qu'aucun accomplissement n'existe.
+  // Ensuite, l'évaluation n'a lieu qu'aux points prévus (check-in, moment d'envie, plan).
+  const achievements = await loadRecentAchievements(user.id);
+
   const firstName = profile?.display_name;
   const todayLabel = formatLocalDate(today, { weekday: "long", day: "numeric", month: "long" });
 
   return (
     <div className="mx-auto grid w-full max-w-6xl gap-6 px-4 py-6 sm:px-6 sm:py-8 lg:py-10">
+      {achievements?.award ? <AchievementNotice result={achievements.award} /> : null}
       <header className="grid gap-1">
         <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
           {firstName ? `Bonjour, ${firstName}` : "Bonjour"}
@@ -81,6 +112,13 @@ export default async function TodayPage() {
         <aside className="grid gap-6" aria-label="Repères">
           {dashboard ? (
             <InsightsCard insights={dashboard.insights} checkinsBeforeInsights={dashboard.checkinsBeforeInsights} />
+          ) : null}
+          {achievements ? (
+            <RecentAchievementsCard
+              earned={achievements.earned}
+              definitions={achievements.definitions}
+              timeZone={profile?.timezone ?? siteConfig.defaultTimeZone}
+            />
           ) : null}
           <MotivationsCard motivations={motivations} reason={reason} />
           <GoalCard substances={substances} />

@@ -279,6 +279,172 @@ ORDER BY checkin_date
 Couverte par l'index unique (`user_id`, `checkin_date`). Les brouillons et les textes personnels
 ne sont jamais lus par les statistiques.
 
+### Sécurité — migration `20261001090000_security_hardening.sql`
+
+- `set_updated_at()` : exécution retirée à `anon` / `authenticated` ; `user_substances` : plus de
+  `DELETE` ni d'`UPDATE (substance_id)` depuis l'application (désactivation seulement).
+- Triggers d'invariants : `enforce_no_future_business_date` (`daily_checkins.checkin_date`,
+  `craving_events.local_date`, `user_substances.started_on`, via `latest_allowed_local_date()`),
+  `enforce_max_active_substances` (6), `enforce_valid_timezone` (`pg_timezone_names`).
+- Clés `consumption_events` / `craving_event_substances` → `user_substances (id, user_id)`
+  **DEFERRABLE INITIALLY DEFERRED**.
+- `delete_my_account()` : SECURITY DEFINER, sans paramètre, supprime `auth.users` pour
+  `auth.uid()`.
+
+### Propriété, RLS et suppression (état audité)
+
+| Table | Propriétaire | Parent / clé | À la suppression du compte |
+| --- | --- | --- | --- |
+| `profiles` | `id` | `auth.users` | CASCADE |
+| `user_substances`, `personal_reasons`, `user_motivations`, `support_contacts`, `onboarding_drafts`, `daily_checkins`, `craving_events`, `user_personal_triggers`, `user_personal_strategies`, `safe_places`, `personal_reminders`, `self_letters`, `user_achievements` | `user_id` | `auth.users` | CASCADE |
+| `checkin_emotions`, `checkin_triggers`, `checkin_achievements`, `consumption_events` | `user_id` | `daily_checkins (id, user_id)` | CASCADE via le check-in |
+| `craving_event_substances`, `craving_event_emotions`, `craving_event_triggers`, `craving_interventions` | `user_id` | `craving_events (id, user_id)` | CASCADE via le moment |
+| références vers `user_substances` (`consumption_events`, `craving_event_substances`) | — | `(user_substance_id, user_id)` | NO ACTION **différée** (supprimées par les cascades avant le commit) |
+| références vers les catalogues | — | `emotions`, `trigger_types`, … | NO ACTION (catalogues jamais supprimés) |
+
+RLS activée sur les 28 tables ; policies `(select auth.uid()) = user_id` (ou `id`) par opération
+accordée ; catalogues en lecture seule ; `user_achievements` en lecture seule.
+
+### Vérifier la sécurité
+
+```bash
+npx supabase db query --linked -f supabase/tests/security_rls.sql
+```
+
+Résultat attendu : `RLS_OK — security : 16 vérifications réussies` (jeu complet sur 22 tables ;
+lecture, modification, suppression et insertion croisées refusées ; références croisées ; RPC avec
+UUID devinés ; affectation de masse ; dates futures ; 7e substance ; fuseau ; droits des fonctions ;
+suppression non authentifiée refusée ; suppression de A : 0 ligne restante, B intact).
+
+### Accomplissements — migration `20260930090000_create_achievements.sql`
+
+| Objet | Rôle |
+| --- | --- |
+| `achievement_category` | `sobriety`, `consistency`, `reflection`, `understanding`, `action`, `plan` |
+| `achievement_definitions` | catalogue stable (51 jalons seedés, `ON CONFLICT (slug) DO NOTHING`) : `slug` unique, `category`, `metric`, `threshold` ≥ 1, `is_quantitative`, `name_fr`, `description_fr`, `icon_key` (clé Lucide), `sort_order`, `is_active` ; `unique (metric, threshold)` |
+| `user_achievements` | obtenus (événements historiques) : `earned_at`, `metadata` `{ metric, threshold, date_source }`, `unique (user_id, achievement_definition_id)` ; index `(user_id, earned_at DESC)` |
+
+Métriques (`achievement_metric_events`, calculées à la volée) : `checkins`, `sober_days`,
+`best_streak`, `reflection_days` (au moins un champ de réflexion non vide, espaces exclus),
+`victory_days`, `trigger_days` / `emotion_days` (journées), `craving_interventions` (moments
+`completed`), `strategies_tried` (distinctes), `plan_reason`, `plan_motivations`,
+`plan_triggers`, `plan_strategies`, `plan_support`, `plan_safe_places`, `plan_reminder`,
+`plan_letter`, `plan_elements` (8 éléments possibles).
+
+**RPC** : `award_achievements()` (SECURITY DEFINER sans paramètre, `authenticated`) →
+`{ awarded: [{ slug, earnedAt }], initial }` ; `get_achievement_progress()` (SECURITY DEFINER,
+valeurs de l'utilisateur courant). Internes, sans droit d'exécution pour l'application :
+`achievement_metric_events(user_id)`, `award_achievements_for(user_id)`.
+
+**RLS** : catalogue — lecture des jalons actifs ; `user_achievements` — lecture de ses lignes
+seulement, aucune écriture depuis l'application.
+
+### Vérifier les accomplissements
+
+```bash
+npx supabase db query --linked -f supabase/tests/achievements_rls.sql
+```
+
+Résultat attendu : `RLS_OK — achievements : 24 vérifications réussies` (métriques, rattrapage
+45 sobres / 52 check-ins / 12 réflexions / 4 interventions, séries, journées avec déclencheur,
+8 → 9 compté, en cours exclu, stratégies distinctes, dates exact / attribution, métadonnées,
+idempotence ×10, consommation qui ne retire rien, plan persistant, aucune auto-attribution,
+fonctions internes fermées, isolation A / B).
+
+### Mon plan — migration `20260929090000_create_personal_plan.sql`
+
+Réutilise `user_substances`, `personal_reasons`, `user_motivations` et `support_contacts`.
+
+| Objet | Rôle |
+| --- | --- |
+| `support_contacts.is_primary` | personne principale ; index unique partiel (une par utilisateur) |
+| `user_personal_triggers` | `trigger_type_id` (catalogue) XOR `custom_label` (1–80), `notes` ≤ 1000, `is_active` ; un déclencheur du catalogue une fois (index unique partiel) |
+| `user_personal_strategies` | `strategy_id` (catalogue Sprint 7) XOR `custom_name` (1–120), `notes` ≤ 1000, `default_duration_minutes` ∈ {5, 10, 15, 20}, `is_favorite`, `is_active` ; une stratégie du catalogue une fois |
+| `safe_places` | `name` (1–80), `description` ≤ 300, `is_favorite`, `is_active` — aucune adresse ni coordonnée |
+| `personal_reminders` | un par utilisateur (`unique (user_id)`), `content` 1–1000 |
+| `self_letters` | une par utilisateur, `title` ≤ 120 facultatif, `content` 1–5000 |
+| `enforce_max_favorites()` | trigger générique : 3 favoris actifs max (stratégies, lieux), verrou par utilisateur |
+
+`updated_at` : trigger existant `set_updated_at()` réutilisé. Index : `user_id` sur chaque table
+(RLS, lecture par utilisateur) ; aucun autre (faible volume).
+
+**RPC** (`SECURITY INVOKER`, `authenticated`) :
+
+| Fonction | Rôle |
+| --- | --- |
+| `add_user_substance(payload)` | slug du catalogue, précision « Autre », objectif, date ≤ aujourd'hui local ; 6 max ; doublon actif refusé (23505) |
+| `set_primary_substance(id)` | échange atomique de la substance principale |
+| `deactivate_user_substance(id)` | `is_active = false` ; refusé pour la principale et la dernière |
+| `set_user_motivations(payload)` | remplacement atomique, au moins une, précision pour « other » |
+| `set_primary_support_contact(id \| null)` | une personne principale au plus |
+
+**Privilèges** : `select, insert, delete` + `update` limité aux colonnes modifiables (jamais
+`user_id`, ni les références au catalogue). **RLS** : select / insert / update / delete de ses
+propres lignes sur les 5 nouvelles tables (même modèle que les tables de l'onboarding).
+
+### Vérifier le plan
+
+```bash
+npx supabase db query --linked -f supabase/tests/plan_rls.sql
+```
+
+Résultat attendu : `RLS_OK — plan : 22 vérifications réussies` (ajout / doublon / date future,
+objectif et date sans toucher à l'historique, principale non désactivable, désactivation avec
+historique intact et substance plus proposée, dernière substance, motivations ≥ 1, déclencheurs,
+durées, 4e favori refusé (stratégies et lieux), personne principale unique, rappel / lettre uniques,
+isolation A / B sur les 9 tables et par UUID deviné).
+
+### Mode envie — migration `20260928090000_create_craving_mode.sql`
+
+| Objet | Rôle |
+| --- | --- |
+| `craving_event_status` | `in_progress`, `completed`, `abandoned` (état technique) |
+| `craving_strategies` | catalogue contrôlé (9 stratégies), lecture seule pour `authenticated` |
+| `craving_events` | un moment d'envie : `local_date` (journée de début), `initial_craving_score` 0–10, `final_craving_score` 0–10, `trigger_unknown` (« Je ne sais pas »), `context_text` ≤ 2000, `outcome_text` ≤ 2000, `status`, `started_at`, `completed_at` |
+| `craving_event_substances` | substances suivies concernées (PK moment + substance ; FK composite vers `user_substances (id, user_id)`) |
+| `craving_event_emotions` | catalogue `emotions` (PK moment + émotion) |
+| `craving_event_triggers` | catalogue `trigger_types` + `custom_label` pour « Autre » (PK moment + déclencheur) |
+| `craving_interventions` | stratégie (catalogue XOR texte ≤ 500), `planned_duration_minutes` 1–120, `actual_duration_seconds`, `started_at`, `paused_at`, `paused_seconds`, `completed_at`, `helped_text` ≤ 2000 ; une par moment (index unique) |
+
+Contraintes clés : `completed` ⇔ score final + `completed_at` ; fin ≥ début ; pas de pause après la
+fin ; clés étrangères composites `(craving_event_id, user_id)` sur toutes les relations (impossible de
+rattacher une ligne au moment d'un autre compte).
+
+**Index** : `craving_events (user_id, started_at DESC)` — historique récent et moment en cours
+(justifié : lecture la plus fréquente, triée par instant) ; index `user_id` sur les relations (RLS),
+`user_substance_id`, `strategy_id`.
+
+**RPC** (`SECURITY INVOKER`, `authenticated` seulement) :
+
+| Fonction | Rôle |
+| --- | --- |
+| `start_craving_event(payload)` | crée le moment et ses relations en une transaction ; idempotente (id client) ; ferme d'abord les moments expirés |
+| `start_craving_intervention(event_id, payload)` | stratégie + durée, démarre le minuteur ; idempotente |
+| `update_craving_timer(event_id, action)` | `pause`, `resume`, `end` (durée réelle bornée à la durée prévue) |
+| `complete_craving_event(event_id, payload)` | score final obligatoire, notes, termine l'intervention, `completed` |
+| `dismiss_craving_event(event_id)` | « Ne pas continuer ce moment » → `abandoned` |
+| `close_stale_craving_events()` | `in_progress` d'une journée passée → `abandoned` |
+| `current_user_local_date()`, `lock_own_craving_event(id)` | aides internes |
+
+**Privilèges** : `select, insert` + `update` limité à des colonnes précises (jamais `local_date`,
+`started_at`, `user_id`) ; **aucune suppression** depuis l'application (la suppression de compte
+passera par la cascade, Sprint 11).
+
+**RLS** : `craving_strategies` — lecture des stratégies actives ; `craving_events` et
+`craving_interventions` — select / insert / update de ses propres lignes ; relations — select /
+insert de ses propres lignes (propriété du parent garantie par la clé composite).
+
+### Vérifier le mode envie
+
+```bash
+npx supabase db query --linked -f supabase/tests/craving_rls.sql
+```
+
+Résultat attendu : `RLS_OK — craving : 24 vérifications réussies` (catalogue, bornes −1 / 11,
+multi-substance, idempotence, deux moments le même jour, substance d'un autre compte, « Je ne sais
+pas », stratégie personnelle, durée, minuteur pause / reprise, fin sans score refusée, journée non
+modifiable, aucune suppression, mise de côté, expiration, isolation A / B par UUID deviné).
+
 ### Progression (Sprint 6) — aucune migration
 
 Aucune table, colonne, fonction ni index ajouté ; aucune table d'agrégats (ADR-053). Une requête

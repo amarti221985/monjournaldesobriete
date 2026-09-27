@@ -1,6 +1,7 @@
 "use client";
 
-import { ChevronDown, LogOut } from "lucide-react";
+import { Award, ChevronDown, LogOut, Settings } from "lucide-react";
+import Link from "next/link";
 import { useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { routes } from "@/config/routes";
 import { signOutAction } from "@/features/auth/actions";
 
 type UserMenuProps = {
@@ -49,6 +51,18 @@ export function UserMenu({ displayName, email }: UserMenuProps) {
           {email ? <span className="truncate text-xs text-muted-foreground">{email}</span> : null}
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+        <DropdownMenuItem asChild className="min-h-10">
+          <Link href={routes.achievements}>
+            <Award aria-hidden="true" />
+            Mes accomplissements
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild className="min-h-10">
+          <Link href={routes.settings}>
+            <Settings aria-hidden="true" />
+            Paramètres
+          </Link>
+        </DropdownMenuItem>
         <DropdownMenuItem
           className="min-h-10"
           disabled={isSigningOut}

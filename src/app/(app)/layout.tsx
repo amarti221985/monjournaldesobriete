@@ -2,9 +2,13 @@ import { redirect } from "next/navigation";
 
 import { AppShell } from "@/components/layout/app-shell";
 import { UserMenu } from "@/features/auth/components/user-menu";
+import { AchievementNotifierProvider } from "@/features/achievements/components/achievement-notifier";
+import { CravingCta } from "@/features/craving/components/craving-cta";
 import { TimezoneSync } from "@/features/profile/components/timezone-sync";
 import { getAppAccessRedirect } from "@/lib/auth/redirects";
 import { requireUser } from "@/lib/auth/session";
+import { getUserToday } from "@/lib/dates";
+import { getActiveCravingEventId } from "@/lib/services/craving";
 import { getCurrentProfile } from "@/lib/services/profiles";
 
 /**
@@ -18,12 +22,23 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   const onboardingRedirect = getAppAccessRedirect(profile);
   if (onboardingRedirect) redirect(onboardingRedirect);
 
+  // CTA global du mode envie (Sprint 7) : reprend le moment en cours d'aujourd'hui s'il existe.
+  const activeCravingEventId = await getActiveCravingEventId(user.id, getUserToday(profile?.timezone));
+
   return (
     <AppShell
-      headerActions={<UserMenu displayName={profile?.display_name ?? null} email={user.email} />}
+      sidebarAction={<CravingCta variant="sidebar" activeEventId={activeCravingEventId} />}
+      headerActions={
+        <>
+          <CravingCta variant="header" activeEventId={activeCravingEventId} />
+          <UserMenu displayName={profile?.display_name ?? null} email={user.email} />
+        </>
+      }
     >
-      {profile && !profile.timezone ? <TimezoneSync /> : null}
-      {children}
+      <AchievementNotifierProvider>
+        {profile && !profile.timezone ? <TimezoneSync /> : null}
+        {children}
+      </AchievementNotifierProvider>
     </AppShell>
   );
 }

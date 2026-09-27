@@ -36,6 +36,10 @@ npx supabase db query --linked -f supabase/tests/profiles_rls.sql
 npx supabase db query --linked -f supabase/tests/onboarding_rls.sql
 npx supabase db query --linked -f supabase/tests/checkins_rls.sql
 npx supabase db query --linked -f supabase/tests/journal_rls.sql
+npx supabase db query --linked -f supabase/tests/craving_rls.sql
+npx supabase db query --linked -f supabase/tests/plan_rls.sql
+npx supabase db query --linked -f supabase/tests/achievements_rls.sql
+npx supabase db query --linked -f supabase/tests/security_rls.sql
 ```
 
 Résultats attendus (affichés comme une erreur, c'est voulu) : `RLS_OK — profiles : 14 vérifications

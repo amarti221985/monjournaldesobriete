@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 
 import { NavLink } from "@/components/layout/nav-link";
 import { BrandMark } from "@/components/shared/brand-mark";
@@ -8,7 +9,7 @@ import { routes } from "@/config/routes";
 import { siteConfig } from "@/config/site";
 
 /** Navigation latérale, visible à partir du breakpoint lg. */
-export function DesktopSidebar() {
+export function DesktopSidebar({ action }: { action?: ReactNode }) {
   return (
     <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col border-r bg-sidebar px-3 py-5 text-sidebar-foreground lg:flex">
       <Link
@@ -18,6 +19,7 @@ export function DesktopSidebar() {
         <BrandMark className="size-8" />
         <span className="truncate">{siteConfig.shortName}</span>
       </Link>
+      {action ? <div className="mb-4">{action}</div> : null}
       <nav aria-label="Navigation principale" className="flex flex-1 flex-col">
         <ul className="flex flex-col gap-1">
           {primaryNavigation.map((item) => (

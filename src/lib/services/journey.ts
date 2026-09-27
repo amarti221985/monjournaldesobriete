@@ -89,20 +89,23 @@ export type SupportContact = {
   relationship: string | null;
   phone: string | null;
   email: string | null;
+  /** Personne principale (au plus une, Sprint 8) */
+  isPrimary: boolean;
 };
 
-/** Personnes de soutien (données privées de tiers). */
+/** Personnes de soutien (données privées de tiers), la personne principale en premier. */
 export async function getSupportContacts(userId: string): Promise<SupportContact[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("support_contacts")
-    .select("id, name, relationship, phone, email")
+    .select("id, name, relationship, phone, email, is_primary")
     .eq("user_id", userId)
+    .order("is_primary", { ascending: false })
     .order("created_at");
 
   if (error) {
     console.error("[journey] Lecture des contacts impossible", { code: error.code });
     throw new Error("Les contacts n'ont pas pu être chargés.");
   }
-  return data;
+  return data.map(({ is_primary, ...contact }) => ({ ...contact, isPrimary: is_primary }));
 }

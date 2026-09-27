@@ -62,6 +62,31 @@ acceptée : on en ajoute une nouvelle qui la remplace (statut « Remplacée par 
 | 054 | Seuils minimaux d'échantillon | Acceptée |
 | 055 | Analyses descriptives, jamais causales | Acceptée |
 | 056 | Aucune note globale de progression | Acceptée |
+| 057 | Les moments d'envie sont indépendants du check-in quotidien | Acceptée |
+| 058 | Mesure avant / après de l'envie | Acceptée |
+| 059 | Une stratégie principale par intervention (V1) | Acceptée |
+| 060 | Minuteur fondé sur des horodatages | Acceptée |
+| 061 | L'analyse des stratégies exige un échantillon minimal | Acceptée |
+| 062 | Moments incomplets et expiration | Acceptée |
+| 063 | Aucune interprétation médicale du score d'envie | Acceptée |
+| 064 | Le plan personnel est choisi par l'utilisateur | Acceptée |
+| 065 | Les références historiques utilisent la désactivation | Acceptée |
+| 066 | Le plan enrichit le mode envie | Acceptée |
+| 067 | Les lieux sûrs ne contiennent aucune géolocalisation précise | Acceptée |
+| 068 | La lettre à soi-même reste privée | Acceptée |
+| 069 | Les accomplissements sont des événements historiques | Acceptée |
+| 070 | La progression cumulative est prioritaire | Acceptée |
+| 071 | Une consommation n'efface aucun accomplissement | Acceptée |
+| 072 | Une intervention terminée compte, quel que soit son résultat | Acceptée |
+| 073 | L'attribution est contrôlée par le serveur | Acceptée |
+| 074 | Ni classement, ni XP, ni score global | Acceptée |
+| 075 | Les données personnelles appartiennent à l'utilisateur | Acceptée |
+| 076 | L'export est un JSON versionné | Acceptée |
+| 077 | La suppression du compte efface les données personnelles de l'application | Acceptée |
+| 078 | Les exports sensibles ne sont jamais mis en cache | Acceptée |
+| 079 | Les dates métier historiques ne sont pas réécrites après un changement de fuseau | Acceptée |
+| 080 | L'identité vient de la session, jamais du navigateur | Acceptée |
+| 081 | Le Sprint 10 reste reporté | Acceptée |
 
 ---
 
@@ -720,3 +745,255 @@ acceptée : on en ajoute une nouvelle qui la remplace (statut « Remplacée par 
 - **Decision** : pas de « score de progression », de note sur 100 ni de lettre. La page montre des
   comptes (jours sobres, jours suivis), un taux explicite (jours sobres ÷ check-ins terminés), des
   moyennes et des séries ; chaque chiffre dit ce qu'il mesure et sur quelle période.
+
+## ADR-057 — Les moments d'envie sont indépendants du check-in quotidien
+
+- **Decision** : table `craving_events`, distincte de `daily_checkins`. Le check-in est une réflexion
+  sur la journée ; un moment d'envie est un instant précis. **Plusieurs moments par journée** sont
+  permis (aucune contrainte d'unicité par date). Un moment ne modifie jamais automatiquement le
+  check-in : ni `craving_score`, ni `status`, ni consommation. L'écran de fin propose seulement
+  « Ouvrir mon check-in » si l'utilisateur souhaite noter une consommation — une envie élevée
+  n'est jamais présumée être une consommation.
+- **Journée locale** : `local_date` = journée de **début** dans le fuseau du profil (fixée par la RPC,
+  non modifiable) ; `started_at` / `completed_at` restent des instants UTC réels (23:58 → 00:08 :
+  journée de début conservée).
+
+## ADR-058 — Mesure avant / après de l'envie
+
+- **Decision** : `initial_craving_score` (0–10, obligatoire) au début, `final_craving_score` (0–10) à la
+  réévaluation. Terminologie unique : `cravingReduction = initial − final` (positive = diminution,
+  négative = hausse, 0 = inchangée). Résultat décrit sans jugement (« Ton envie est passée de 8/10 à
+  5/10 pendant cette intervention », « est restée à 8/10 », « est plus forte qu'au début ») ; jamais
+  « excellent », « échec » ni confettis. Un moment n'est **jamais** `completed` sans score final
+  (contrainte `craving_events_completion_consistent` + RPC).
+
+## ADR-059 — Une stratégie principale par intervention (V1)
+
+- **Decision** : catalogue `craving_strategies` (9 stratégies, lecture seule) + « Ma propre stratégie »
+  (`strategy_id` NULL et `custom_strategy_text` 1–500, contrainte « exactement une des deux »).
+  Une intervention par moment (index unique sur `craving_event_id`, levable plus tard) : l'analyse
+  avant / après reste attribuable à une seule stratégie. « Essayer une autre stratégie » crée un
+  nouveau moment (mêmes substances, émotions et déclencheurs ; envie initiale = score final
+  précédent).
+- Les stratégies sont proposées comme des choses « à essayer », jamais comme un traitement.
+
+## ADR-060 — Minuteur fondé sur des horodatages
+
+- **Decision** : aucun décompte local fragile. Persistés : `started_at`, `planned_duration_minutes`
+  (5, 10, 15 ou sans minuteur ; 1–120 en base), `paused_at`, `paused_seconds`. Le client calcule
+  `restant = prévu − (maintenant − started_at − paused_seconds − pause en cours)` à chaque seconde
+  (affichage seulement) et corrige l'écart d'horloge avec l'heure serveur du rendu. Rafraîchir,
+  changer d'onglet ou mettre en veille ne perd rien ; aucune requête par seconde.
+- **Pause / reprise** : RPC `update_craving_timer('pause' | 'resume')`. **Fin** (`'end'`) : durée réelle
+  approximative = temps actif, bornée à la durée prévue ; présentée comme « environ 10 min ».
+- À l'expiration : aucune alarme, passage calme à « Comment est ton envie maintenant ? ».
+  Accessibilité : `role="timer"` avec `aria-live="off"` ; seules des annonces ponctuelles (minute,
+  pause, fin) sont lues. Pas de notification (Sprint 10).
+
+## ADR-061 — L'analyse des stratégies exige un échantillon minimal
+
+- **Decision** : « Ce qui semble t'aider » = moyenne de `initial − final` par stratégie, uniquement sur
+  les moments **terminés**, et seulement pour les stratégies utilisées **au moins 3 fois**
+  (`STRATEGY_MIN_COMPLETED`). Sous le seuil : historique seulement, aucune comparaison. Formulation :
+  « Lors de tes 6 interventions avec « Marcher », ton envie a diminué en moyenne de 2,3 points » ;
+  « Parmi tes stratégies utilisées au moins 3 fois, … est associée à la plus grande diminution
+  moyenne » — jamais « ta meilleure stratégie ». Les stratégies personnelles sont regroupées.
+
+## ADR-062 — Moments incomplets et expiration
+
+- **Decision** : un moment quitté avant la fin reste `in_progress` et peut être repris le même jour
+  (CTA « Continuer mon intervention », bandeau sur `/craving`). Transition documentée : un moment
+  encore `in_progress` dont la journée locale est passée devient `abandoned`
+  (`close_stale_craving_events()`, appelée au démarrage d'un moment et sur les pages du mode envie).
+  « Ne pas continuer ce moment » fait de même. Un moment `abandoned` n'est jamais repris ni compté
+  dans l'historique ou les analyses ; il n'est pas présenté comme « abandonné ».
+- **Double clic** : l'identifiant du moment est généré par le client (réutilisé en cas de nouvel
+  essai) ; `start_craving_event` et `start_craving_intervention` sont idempotents.
+- **Réseau** : les réponses restent dans l'état du formulaire en cas d'erreur (« Nous n'avons pas pu
+  enregistrer cette étape. Tes réponses sont toujours affichées. ») ; pas de mode hors ligne (PWA,
+  Sprint 10).
+
+## ADR-063 — Aucune interprétation médicale du score d'envie
+
+- **Decision** : un score (même 10/10) décrit une intensité ressentie ; il ne déclenche aucune
+  alerte, aucun diagnostic ni évaluation de danger (urgence, intoxication, surdose, psychose, risque
+  suicidaire). Une information de sécurité fixe et discrète reste accessible sur toutes les pages du
+  mode envie : contacter les services d'urgence ou un professionnel de la santé en cas de danger.
+  CTA global calme (« J'ai envie de consommer », variante secondaire), jamais « Urgence » ni SOS.
+- **Confidentialité** : contexte, stratégie personnelle, « ce qui t'a aidé » et notes ne vont jamais
+  dans une URL, un journal ou un outil d'analytique ; les contacts de soutien utilisent les liens
+  natifs de l'appareil (`tel:`, `mailto:`), sans envoi serveur ni journalisation. Aucune IA.
+
+## ADR-064 — Le plan personnel est choisi par l'utilisateur
+
+- **Decision** : `/plan` contient ce que l'utilisateur **choisit de préparer** ; `/progress` montre ce
+  que ses données **observent**. Aucune donnée analytique ne modifie le plan : un déclencheur
+  fréquent dans les check-ins n'est jamais ajouté aux déclencheurs personnels, une stratégie associée
+  à une forte baisse d'envie ne devient jamais favorite automatiquement. Deux tables distinctes :
+  `checkin_triggers` (enregistré dans une journée) et `user_personal_triggers` (gardé à l'œil).
+- Le plan réutilise les données de l'onboarding (`user_substances`, `personal_reasons`,
+  `user_motivations`, `support_contacts`) sans les dupliquer. Sections facultatives, sauf les
+  fondamentaux déjà requis (au moins une substance suivie avec objectif, une raison, une
+  motivation). Aucun pourcentage de complétion.
+- **UX** : consultation d'abord, édition dans la carte, **sauvegarde indépendante par section**
+  (Server Action + validation Zod + contraintes / RLS). Annuler avec des modifications demande
+  confirmation ; quitter la page aussi (`beforeunload`). Sections chargées en parallèle et
+  indépendantes (`Promise.allSettled`) : une section en erreur n'empêche pas les autres.
+
+## ADR-065 — Les références historiques utilisent la désactivation
+
+- **Decision** : une substance suivie n'est jamais supprimée : « Arrêter le suivi » met
+  `is_active = false` (RPC `deactivate_user_substance`) ; consommations et moments d'envie restent
+  intacts. Refusé pour la substance principale (en choisir une autre d'abord) et pour la dernière
+  substance suivie. Changer l'objectif ou `started_on` ne crée, ne supprime ni ne modifie aucun
+  check-in (confirmation affichée pour la date).
+- Déclencheurs, stratégies, lieux et contacts du plan ne sont **référencés par aucun historique** : les
+  interventions copient la stratégie (slug du catalogue ou texte personnel) et ne pointent vers aucun
+  contact. Ils peuvent donc être supprimés après confirmation sans rien casser.
+- Favoris : **3 au maximum** pour les stratégies et les lieux, appliqué par la base (trigger
+  `enforce_max_favorites`, verrou par utilisateur) ; une seule personne principale (index unique
+  partiel + RPC `set_primary_support_contact`).
+
+## ADR-066 — Le plan enrichit le mode envie
+
+- **Decision** : pendant une intervention, les éléments du plan sont accessibles **sans surcharger** :
+  actions secondaires repliées (« Voir mon rappel », « Relire pourquoi j'ai commencé », « Contacter
+  quelqu'un » avec la personne principale en premier, « Changer d'endroit » avec les lieux sûrs,
+  « Relire ma lettre »). Choix de la stratégie : « Tes stratégies » (plan, favoris d'abord, avec leur
+  durée par défaut) puis « Autres stratégies » (catalogue non encore dans le plan). Sur `/craving`,
+  un panneau « Ce qui peut m'aider maintenant » (stratégie favorite, personne principale, lieu favori,
+  rappel) n'apparaît que si l'utilisateur a marqué ces éléments.
+- Les éléments du plan sont facultatifs pour le mode envie : une erreur de lecture ne bloque jamais
+  une intervention. La durée 20 minutes est ajoutée aux durées du minuteur.
+
+## ADR-067 — Les lieux sûrs ne contiennent aucune géolocalisation précise
+
+- **Decision** : `safe_places` = nom (80) + description facultative (300), en texte libre. Aucune
+  adresse, coordonnée ni permission de localisation n'est demandée ; le mode envie n'utilise jamais
+  la position de l'appareil. Exemples affichés dans l'interface seulement, jamais enregistrés.
+
+## ADR-068 — La lettre à soi-même reste privée
+
+- **Decision** : `self_letters` (une par utilisateur, titre facultatif, contenu ≤ 5000) sous RLS stricte.
+  Jamais dans une URL, un titre de page, des métadonnées, un journal serveur, un outil d'analytique
+  ni un service tiers ; aucune IA. Repliée par défaut sur `/plan` et dans le mode envie : elle ne
+  s'affiche que si l'utilisateur choisit de l'ouvrir. Même règle pour la raison, les notes, les
+  stratégies personnelles, les lieux et le rappel (`personal_reminders`, un par utilisateur, ≤ 1000).
+
+## ADR-069 — Les accomplissements sont des événements historiques
+
+- **Decision** : contrairement aux statistiques (dérivées, jamais persistées — ADR-053), un
+  accomplissement est un **événement obtenu** : il est persisté dans `user_achievements`
+  (`UNIQUE (user_id, achievement_definition_id)`) et n'est **jamais retiré** ni recalculé, même si
+  l'état actuel change (journée modifiée, lettre supprimée, stratégie retirée). Seul ce qui a été
+  obtenu est persisté ; les compteurs (journées sobres, réflexions…) restent calculés à la volée.
+- `metadata` ne contient que `{ metric, threshold, date_source }` : jamais de texte du journal,
+  notes, lettre, raison ou contexte d'envie.
+
+## ADR-070 — La progression cumulative est prioritaire
+
+- **Decision** : les jalons de sobriété principaux comptent les **journées sobres enregistrées au
+  total** (non nécessairement consécutives, ADR-041) ; les libellés disent exactement cela
+  (« 365 journées sobres enregistrées », jamais « 1 an sobre »). Les séries sont secondaires et
+  historiques (« 30 journées dans une même série ») et suivent exactement la définition existante
+  (journées sans check-in ignorées, ADR-042) : meilleure série 32 → 7, 14, 30.
+- Catégories : Sobriété, Constance (check-ins), Réflexion (réflexions, victoires), Compréhension
+  (JOURNÉES avec déclencheur / émotion — jamais le nombre de déclencheurs), Action (interventions,
+  stratégies distinctes), Mon plan (préparation, jamais une obligation, aucun « 100 % »).
+
+## ADR-071 — Une consommation n'efface aucun accomplissement
+
+- **Decision** : une consommation peut interrompre la série actuelle, jamais retirer un jalon,
+  effacer les journées sobres cumulées ni remettre la progression à zéro. Un check-in « consumed »
+  fait progresser les check-ins, réflexions, déclencheurs et émotions (on reconnaît le fait d'avoir
+  observé et enregistré, pas la consommation). Aucun accomplissement ne dépend du nombre de
+  consommations ni des quantités.
+
+## ADR-072 — Une intervention terminée compte, quel que soit son résultat
+
+- **Decision** : les jalons « Action » comptent les moments d'envie `completed` ; 8 → 8 ou 7 → 9
+  comptent autant que 8 → 5. On reconnaît l'utilisation de l'outil, pas la baisse de l'envie. Les
+  moments `in_progress` ou `abandoned` ne comptent pas. Stratégies distinctes : une stratégie du
+  catalogue ou un texte personnel compte une fois (marcher ×10 = 1).
+
+## ADR-073 — L'attribution est contrôlée par le serveur
+
+- **Decision** : `user_achievements` est en **lecture seule** pour l'utilisateur (aucun INSERT /
+  UPDATE / DELETE). L'attribution passe par `award_achievements()`, `SECURITY DEFINER`
+  extrêmement ciblé : aucun paramètre (utilisateur = `auth.uid()`), `search_path` vide, n'insère que
+  les jalons dont le critère est satisfait par les données de l'utilisateur, `earned_at` choisi par
+  la base. Les fonctions internes (`achievement_metric_events`, `award_achievements_for`) lisent
+  n'importe quel utilisateur et ne sont exécutables par aucun rôle de l'application.
+- **Moteur** : métriques calculées en SQL en une passe (quelques agrégats, aucune requête par
+  accomplissement), mêmes définitions que l'application ; comparaison « valeur ≥ seuil » ;
+  insertion idempotente (contrainte unique + `ON CONFLICT DO NOTHING`, verrou par utilisateur :
+  évaluations simultanées sans doublon). Évaluation aux points prévus seulement — fin de check-in,
+  fin de moment d'envie, modification du plan, ouverture de `/achievements` (filet) et rattrapage
+  unique sur `/today` tant qu'aucun accomplissement n'existe — jamais à chaque rendu, aucun cron.
+- **Rattrapage et dates** : la première évaluation attribue tout l'historique. `earned_at` =
+  `completed_at` du N-ième élément qualifiant (check-in, journée sobre, réflexion, intervention) ou
+  instant où la série a atteint le seuil (`date_source = exact`) ; pour le plan, l'historique ne
+  permet pas de dater : date d'attribution (`date_source = attribution`, affichée « Reconnu le »).
+  Aucune précision inventée. Dates affichées dans le fuseau du profil.
+- **Notification** : discrète (carte non modale, `role="status"`, sans son ni confettis,
+  animation désactivée si `prefers-reduced-motion`), seulement pour les accomplissements réellement
+  nouveaux ; plusieurs → regroupés (« 3 nouveaux accomplissements ») ; rattrapage → une seule
+  synthèse (« Ton historique contient 12 accomplissements déjà atteints »).
+
+## ADR-074 — Ni classement, ni XP, ni score global
+
+- **Decision** : aucune pièce, XP, niveau, classement, compétition, flamme ni message culpabilisant.
+  Non obtenu = « À découvrir » ou progression factuelle (« 42 journées sobres enregistrées sur 60 »),
+  jamais de cadenas ni « encore 18 jours avant de réussir ». Pas de pourcentage de complétion ; les
+  « Prochaines étapes » (3 au plus, une par catégorie, les plus proches de leur seuil) restent des
+  suggestions. Aucune donnée d'accomplissement envoyée à un tiers.
+
+## ADR-075 — Les données personnelles appartiennent à l'utilisateur
+
+- **Decision** : l'utilisateur peut consulter son compte (`/settings`), exporter toutes ses données
+  et supprimer définitivement son compte. Transparence (section Confidentialité), minimisation,
+  aucun partage automatique. Voir `docs/PRIVACY.md` (carte des données) et `docs/SECURITY.md`.
+
+## ADR-076 — L'export est un JSON versionné
+
+- **Decision** : `POST /api/account/export` (session + même origine) produit un JSON
+  `export_version: 1` : `exported_at`, `timezone`, `account`, `journey`, `checkins` (relations
+  imbriquées), `craving_events`, `personal_plan`, `achievements`. Structure imbriquée sans
+  identifiant interne ; libellés de catalogue inclus seulement pour la lisibilité ; aucun jeton,
+  mot de passe, secret ni donnée interne. Nom de fichier neutre `mes-donnees-AAAA-MM-JJ.json`.
+  Pas de CSV (modèle relationnel : peu de valeur ajoutée). Limite : un export / 10 s / utilisateur.
+
+## ADR-077 — La suppression du compte efface les données personnelles de l'application
+
+- **Decision** : Server Action (session → même origine → « SUPPRIMER » → mot de passe vérifié) puis
+  RPC `delete_my_account()` (SECURITY DEFINER sans paramètre, `auth.uid()`) qui supprime
+  `auth.users` ; les `ON DELETE CASCADE` (directs ou via parents composites) effacent toutes les
+  tables personnelles dans la même transaction. Références vers `user_substances` différées au
+  commit (sinon échec). Aucune clé `service_role` n'est utilisée. Session et cookies nettoyés,
+  page publique « Ton compte a été supprimé ». Aucune restauration promise. La réinitialisation du
+  parcours (conserver le compte) n'est pas implémentée.
+
+## ADR-078 — Les exports sensibles ne sont jamais mis en cache
+
+- **Decision** : `Cache-Control: private, no-store, max-age=0`, `Pragma: no-cache`,
+  `Content-Disposition: attachment`, `X-Content-Type-Options: nosniff` ; aucun journal du contenu.
+
+## ADR-079 — Les dates métier historiques ne sont pas réécrites après un changement de fuseau
+
+- **Decision** : changer le fuseau (`/settings`, identifiant IANA validé par l'application et par
+  la base) modifie seulement ce qui dépend d'« aujourd'hui » à partir de ce moment. Les
+  `checkin_date`, `local_date` et `started_on` déjà enregistrés restent inchangés (une journée
+  vécue ne change pas de date).
+
+## ADR-080 — L'identité vient de la session, jamais du navigateur
+
+- **Decision** : aucune Server Action, RPC ni route n'accepte un `user_id` pour choisir le compte
+  visé : `auth.uid()` en base, `getCurrentUser()` côté serveur. Les schémas Zod ne conservent que
+  les champs déclarés (pas d'affectation de masse) et les droits de colonnes interdisent de modifier
+  `user_id`, les horodatages système, `onboarding_completed` ou `substance_id`.
+
+## ADR-081 — Le Sprint 10 reste reporté
+
+- **Decision** : PWA, service worker, manifeste avancé, notifications Web Push, abonnements,
+  préférences de notification, planificateur, VAPID et mode hors ligne ne sont PAS implémentés. Le
+  Sprint 11 (sécurité et confidentialité) a été réalisé avant, pour consolider les fondations.

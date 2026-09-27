@@ -8,6 +8,7 @@ Avant chaque sprint, lire dans cet ordre :
 2. [docs/DECISIONS.md](docs/DECISIONS.md) — décisions d'architecture (ADR) déjà prises.
 3. [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) et [docs/DATABASE.md](docs/DATABASE.md).
 4. [docs/PROJECT.md](docs/PROJECT.md) — roadmap et état des sprints.
+   [docs/SECURITY.md](docs/SECURITY.md) et [docs/PRIVACY.md](docs/PRIVACY.md) — sécurité et données.
 5. [docs/SUPABASE_SETUP.md](docs/SUPABASE_SETUP.md) — configuration Supabase manuelle.
 
 Règles essentielles :
@@ -33,6 +34,23 @@ Règles essentielles :
   check-ins » ni `Date.now() - N × 24 h`. Analyses : seuils de `ANALYTICS_THRESHOLDS` /
   `PROGRESS_INSIGHT_RULES`, écarts en points (pas en %), aucune note globale, aucune table d'agrégats.
 - Consommation : journées ≠ événements ; ne jamais additionner des quantités.
+- Mode envie : `craving_events` indépendants du check-in (jamais de modification automatique) ;
+  écritures via les RPC `start_craving_event`, `start_craving_intervention`, `update_craving_timer`,
+  `complete_craving_event` ; minuteur calculé depuis les horodatages (`getTimerState`) ;
+  réduction = initial − final ; analyse des stratégies ≥ 3 interventions terminées ; aucune
+  interprétation médicale du score, jamais « Urgence ».
+- Mon plan : données CHOISIES par l'utilisateur, jamais déduites des statistiques ; réutiliser les tables
+  de l'onboarding ; substance = désactivation (`deactivate_user_substance`), jamais suppression ;
+  favoris max 3 et personne principale unique appliqués par la base ; lieux sûrs sans géolocalisation ;
+  lettre / rappel / notes jamais journalisés ni dans une URL.
+- Accomplissements : événements historiques persistés, jamais retirés ; attribution UNIQUEMENT via la
+  RPC `award_achievements()` (aucune écriture client sur `user_achievements`) aux points prévus
+  (check-in, moment d'envie, plan, `/achievements`) ; métriques = mêmes définitions que les Sprints 4/7 ;
+  jamais de récompense liée à la consommation, d'XP, de niveau ni de classement.
+- Sécurité (Sprint 11, voir `docs/SECURITY.md` / `docs/PRIVACY.md`) : nouvelle table personnelle →
+  `user_id` + RLS + clé composite vers le parent + `ON DELETE CASCADE` (vérifier `security_rls.sql`,
+  mettre à jour la carte des données et l'export) ; jamais de `service_role` ; SECURITY DEFINER
+  seulement sans paramètre `user_id` ; en-têtes dans `next.config.ts` ; Sprint 10 reporté ; aucune IA.
 - Calendrier : champs minimaux seulement ; journal : `search_journal` (côté base, paginé) ; le terme
   recherché ne va jamais dans l'URL ni dans les journaux.
 - Chemins via `src/config/routes.ts` ; redirections via `getSafeRedirect()`.

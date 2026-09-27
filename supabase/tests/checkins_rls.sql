@@ -182,12 +182,15 @@ begin
   end;
   if v_error is distinct from 'invalid_consumption_events' then raise exception 'ÉCHEC 16 : %', v_error; end if;
 
-  -- 17. Substance d'un autre utilisateur refusée (clé étrangère composite, insertion directe)
+  -- 17. Substance d'un autre utilisateur refusée (clé étrangère composite, insertion directe).
+  -- Clé DIFFÉRÉE depuis le Sprint 11 (vérifiée au COMMIT) : vérification forcée ici.
+  set constraints all immediate;
   begin
     insert into public.consumption_events (checkin_id, user_substance_id) values (v_checkin_a, v_cannabis_b);
     raise exception 'ÉCHEC 17 : substance de B rattachée au check-in de A';
   exception when foreign_key_violation then null;
   end;
+  set constraints all deferred;
 
   -- 18. Un check-in terminé ne peut pas être supprimé
   delete from public.daily_checkins where id = v_checkin_a;

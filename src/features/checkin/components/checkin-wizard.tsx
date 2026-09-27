@@ -11,6 +11,7 @@ import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { routes } from "@/config/routes";
+import { useAchievementNotifier } from "@/features/achievements/components/achievement-notifier";
 import {
   completeCheckinAction,
   saveCheckinDraftAction,
@@ -75,6 +76,7 @@ export function CheckinWizard({
   returnHref,
 }: CheckinWizardProps) {
   const router = useRouter();
+  const notifyAchievements = useAchievementNotifier();
   const [draft, setDraft] = useState<CheckinDraft>(initialDraft);
   const [stepIndex, setStepIndex] = useState(initialStepIndex);
   const [errors, setErrors] = useState<StepErrors>({});
@@ -187,6 +189,7 @@ export function CheckinWizard({
     startSubmitting(async () => {
       try {
         const state = await completeCheckinAction(buildCheckinPayload(draft, checkinDate));
+        if (state.status === "completed") notifyAchievements(state.achievements);
         if (state.status === "completed" && returnHref) {
           // Journée historique : retour au détail, qui relit les données enregistrées.
           router.replace(returnHref);

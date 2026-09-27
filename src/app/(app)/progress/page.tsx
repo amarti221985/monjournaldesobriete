@@ -20,7 +20,14 @@ import { StatusDistributionCard } from "@/features/progress/components/analytics
 import { formatScore, pluralize } from "@/features/progress/format";
 import { countRangeDays, formatRange, parseProgressPeriod, progressPeriodLabels } from "@/features/progress/periods";
 import { buildProgressPage, type ProgressPageData } from "@/features/progress/progress-page";
+import { MilestonesCard } from "@/features/achievements/components/achievement-summaries";
+import { buildAchievementViews, nextMilestoneFor } from "@/features/achievements/logic";
 import { requireUser } from "@/lib/auth/session";
+import {
+  getAchievementDefinitions,
+  getAchievementProgress,
+  getEarnedAchievements,
+} from "@/lib/services/achievements";
 import { getUserToday } from "@/lib/dates";
 import { getTrackedSubstances, type TrackedSubstance } from "@/lib/services/journey";
 import { getCurrentProfile } from "@/lib/services/profiles";
@@ -33,6 +40,21 @@ export const metadata: Metadata = {
 const TITLE = "Ma progression";
 const SUBTITLE =
   "Observe ton évolution, découvre les tendances de ton parcours et reconnais le chemin parcouru.";
+
+/** « Jalons » : lecture seule (aucune attribution ici) ; une erreur masque la carte. */
+async function loadMilestones(userId: string) {
+  try {
+    const [definitions, stats, earned] = await Promise.all([
+      getAchievementDefinitions(),
+      getAchievementProgress(),
+      getEarnedAchievements(userId),
+    ]);
+    const views = buildAchievementViews(definitions, stats, earned);
+    return { earnedCount: earned.length, nextCheckins: nextMilestoneFor(views, "checkins") };
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Progression & analyses (Sprint 6). Données privées : identité issue de la session
@@ -81,6 +103,7 @@ export default async function ProgressPage({ searchParams }: PageProps<"/progres
   }
 
   const data: ProgressPageData = buildProgressPage(today, dataset.checkins, period, dataset.labels);
+  const milestones = await loadMilestones(user.id);
   const periodLabel = progressPeriodLabels[period];
   const topAssociation = data.achievementAssociations[0];
 
@@ -99,6 +122,7 @@ export default async function ProgressPage({ searchParams }: PageProps<"/progres
 
       <PeriodMetrics metrics={data.metrics} periodLabel={periodLabel.toLowerCase()} />
       <SinceStartCard metrics={data.allTime.metrics} streaks={data.allTime.streaks} />
+      {milestones ? <MilestonesCard earnedCount={milestones.earnedCount} nextCheckins={milestones.nextCheckins} /> : null}
 
       <div className="grid items-start gap-6 lg:grid-cols-2">
         <ScoreEvolutionCard

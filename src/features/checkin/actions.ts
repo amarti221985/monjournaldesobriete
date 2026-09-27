@@ -6,6 +6,7 @@ import { CHECKIN_SAVE_ERROR } from "@/features/checkin/constants";
 import { createCheckinPayloadSchema } from "@/features/checkin/schemas";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getLatestAllowedLocalDate, getUserToday, isValidDateString } from "@/lib/dates";
+import { awardAchievements, type AwardResult } from "@/lib/services/achievements";
 import { discardCheckinDraft, saveCheckin } from "@/lib/services/checkins";
 import { getCurrentProfile } from "@/lib/services/profiles";
 
@@ -16,7 +17,7 @@ import { getCurrentProfile } from "@/lib/services/profiles";
 
 export type SaveCheckinState =
   | { status: "saved" }
-  | { status: "completed" }
+  | { status: "completed"; achievements?: AwardResult }
   | { status: "error"; message: string };
 
 async function saveWith(input: unknown, finalize: boolean): Promise<SaveCheckinState> {
@@ -42,7 +43,9 @@ async function saveWith(input: unknown, finalize: boolean): Promise<SaveCheckinS
     // Brouillon envoyé pour un check-in déjà terminé (ex. autre onglet) : rien n'est écrasé.
     return { status: "error", message: "Ce check-in est déjà terminé. Recharge la page pour le voir." };
   }
-  return { status: finalize ? "completed" : "saved" };
+  if (!finalize) return { status: "saved" };
+  // Point d'évaluation : fin de check-in (idempotent, ne bloque jamais la sauvegarde).
+  return { status: "completed", achievements: await awardAchievements() };
 }
 
 /** Sauvegarde du brouillon à chaque changement d'étape (jamais un check-in terminé). */
