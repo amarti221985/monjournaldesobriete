@@ -1,5 +1,14 @@
 import type { CheckinStepId } from "@/features/checkin/constants";
 
+/**
+ * Formulation selon la journée : pour une journée passée, « aujourd'hui » devient « ce jour-là »
+ * et « demain » devient « le lendemain ».
+ */
+export function forCheckinDay(text: string, isPastDay: boolean): string {
+  if (!isPastDay) return text;
+  return text.replace(/aujourd'hui/g, "ce jour-là").replace(/pour demain/g, "pour le lendemain");
+}
+
 /** Question et sous-titre de chaque étape du check-in. */
 export const checkinStepContent: Record<CheckinStepId, { heading: string; description?: string }> = {
   status: { heading: "Comment s'est passée ta journée?" },

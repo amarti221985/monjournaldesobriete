@@ -27,7 +27,7 @@ cassé) · **P2** mineur (formulation, espacement, petit problème d'UX).
 | ISSUE-04 | P2 (décision) | La confirmation du courriel est désactivée dans Supabase : une faute de frappe dans l'adresse rend la récupération du compte impossible | Décision du propriétaire ; si activée, les courriels dépendent aussi d'ISSUE-03 |
 | ISSUE-09 | P2 | Tableau de bord : les jours précédant le début du parcours sont comptés « non documentés » dans la semaine d'un nouveau compte (le calendrier affiche bien « Avant ton parcours ») | Harmoniser avec le calendrier après la bêta |
 | ISSUE-12 | P2 | Boutons secondaires de 36 px de haut (sélecteurs de période, liens « Voir… ») sous les 44 px recommandés ; actions principales à 44–48 px | Polissage après retours |
-| ISSUE-13 | P2 | Pas de saisie rétroactive d'une journée oubliée (ADR-051, confirmé ADR-095) | Observer pendant la bêta (« j'oublie mon check-in ») |
+| ISSUE-13 | Résolu | Pas de saisie rétroactive d'une journée oubliée | Check-in d'une journée passée ajouté (ADR-098) |
 | ISSUE-14 | P2 | Onboarding : le texte de l'étape en cours n'est pas sauvegardé automatiquement (seulement sur « Continuer ») | Parcours court ; à revoir si signalé |
 | ISSUE-15 | P2 | `notFound()` sous streaming : statut HTTP 200 et titre d'onglet de la page (le contenu affiché est bien « Page introuvable », `noindex`) | Limite connue de Next.js avec `loading.tsx` racine |
 | ISSUE-16 | NOT TESTED | Impression Edge au format A4 (échec de l'outil d'impression sans interface) ; Chrome A4 et Edge Letter conformes | Vérification manuelle facultative |

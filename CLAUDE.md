@@ -58,6 +58,8 @@ Règles essentielles :
   `ANTHROPIC_API_KEY` serveur seulement ; ne jamais journaliser prompt, jeu de données ni réponse ;
   aucun diagnostic, prédiction, causalité, jugement ni chatbot.
 - Accomplissements : jamais attribués pendant un rendu GET (ADR-089).
+- Journée passée (ADR-098) : check-in possible du début du parcours à hier via `/journal/[date]/edit`
+  (`canBackfillCheckin`) ; aujourd'hui via `/today/checkin` ; formulations via `forCheckinDay`.
 - Rapport PDF (`docs/PDF_EXPORT.md`) : page imprimable `(report)`, `no-store` + `noindex`, jamais
   la lettre ni les contacts ; aucun service PDF tiers ; à l'impression, blocs simples (pas de grille).
 - Bêta V1 (`docs/BETA_*.md`) : avis via `beta_feedback` seulement (aucune capture, aucun outil tiers) ;

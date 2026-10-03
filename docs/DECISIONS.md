@@ -1113,3 +1113,16 @@ acceptée : on en ajoute une nouvelle qui la remplace (statut « Remplacée par 
   `RESEND_API_KEY`, `FEEDBACK_NOTIFY_EMAIL`, `FEEDBACK_FROM_EMAIL` (facultative ; expéditeur par
   défaut `onboarding@resend.dev`, qui n'envoie qu'à l'adresse du compte Resend). Sans configuration,
   rien n'est envoyé et l'avis reste en base. Diagnostic : `/api/health` → `feedbackNotifications`.
+
+## ADR-098 — Check-in d'une journée passée
+
+- **Contexte** : demande du propriétaire ; remplace la partie « sans création rétroactive »
+  d'ADR-051 et ADR-095.
+- **Decision** : une journée passée sans check-in terminé peut être notée depuis son détail
+  (« Faire le check-in de cette journée » → `/journal/[date]/edit`), du **début du parcours**
+  (date de début la plus ancienne des substances) **jusqu'à hier** (`canBackfillCheckin`, testée).
+  Aujourd'hui passe toujours par `/today/checkin` ; le futur reste refusé par la base. Même wizard,
+  même RPC `save_checkin`, brouillon et sauvegarde automatique ; formulations adaptées (« ce jour-là »,
+  « le lendemain »). Avant le début du parcours : explication et lien vers Mon plan (date de début
+  modifiable). Aucun marqueur « ajouté plus tard » : une journée notée compte comme toute journée
+  enregistrée (séries, statistiques, accomplissements).

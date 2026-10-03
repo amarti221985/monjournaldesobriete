@@ -19,6 +19,7 @@ import {
   type CheckinStatus,
 } from "@/features/checkin/constants";
 import { ScoreScale } from "@/features/checkin/components/score-scale";
+import { forCheckinDay } from "@/features/checkin/components/step-content";
 import {
   toggleLabelledSelection,
   toggleNoTrigger,
@@ -85,7 +86,8 @@ export function StatusStep({
   draft,
   errors,
   onStatusChange,
-}: CheckinStepProps & { onStatusChange: (status: CheckinStatus) => void }) {
+  isPastDay = false,
+}: CheckinStepProps & { onStatusChange: (status: CheckinStatus) => void; isPastDay?: boolean }) {
   return (
     <fieldset
       id="status"
@@ -104,7 +106,7 @@ export function StatusStep({
             name="status"
             value={status}
             label={option.label}
-            description={option.description}
+            description={forCheckinDay(option.description, isPastDay)}
             icon={<Icon className="size-5" />}
             checked={draft.status === status}
             onCheckedChange={(checked) => checked && onStatusChange(status)}
@@ -471,12 +473,12 @@ export function AchievementsStep({
 
 // --- Étape : Réflexion --------------------------------------------------------------
 
-export function ReflectionStep({ draft, onChange, errors }: CheckinStepProps) {
+export function ReflectionStep({ draft, onChange, errors, isPastDay = false }: CheckinStepProps & { isPastDay?: boolean }) {
   return (
     <div className="grid gap-5">
       <OptionalTextarea
         id="proudOfText"
-        label="De quoi es-tu fier ou fière aujourd'hui?"
+        label={forCheckinDay("De quoi es-tu fier ou fière aujourd'hui?", isPastDay)}
         value={draft.proudOfText}
         max={TEXT_LIMITS.proudOfText}
         error={errors.proudOfText}
@@ -484,7 +486,7 @@ export function ReflectionStep({ draft, onChange, errors }: CheckinStepProps) {
       />
       <OptionalTextarea
         id="lessonText"
-        label="Qu'as-tu appris aujourd'hui?"
+        label={forCheckinDay("Qu'as-tu appris aujourd'hui?", isPastDay)}
         value={draft.lessonText}
         max={TEXT_LIMITS.lessonText}
         error={errors.lessonText}
@@ -492,7 +494,7 @@ export function ReflectionStep({ draft, onChange, errors }: CheckinStepProps) {
       />
       <OptionalTextarea
         id="tomorrowIntentionText"
-        label="Quelle est ton intention pour demain?"
+        label={forCheckinDay("Quelle est ton intention pour demain?", isPastDay)}
         value={draft.tomorrowIntentionText}
         max={TEXT_LIMITS.tomorrowIntentionText}
         error={errors.tomorrowIntentionText}

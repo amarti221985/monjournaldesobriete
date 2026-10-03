@@ -13,11 +13,13 @@ import { journalDayHref } from "@/features/calendar/logic";
 import { CheckinSummaryView } from "@/features/checkin/components/checkin-summary-view";
 import { statusOptions } from "@/features/checkin/constants";
 import { recordToDisplay } from "@/features/checkin/display";
+import { canBackfillCheckin, getJourneyStartDate } from "@/features/checkin/logic";
 import { parseJournalDateParam } from "@/features/journal/logic";
 import { requireUser } from "@/lib/auth/session";
 import { formatLocalDate, formatWeekdayDate, getUserToday } from "@/lib/dates";
 import { getCheckinForDate } from "@/lib/services/checkins";
 import { getAdjacentCheckinDates } from "@/lib/services/journal";
+import { getTrackedSubstances } from "@/lib/services/journey";
 import { getCurrentProfile } from "@/lib/services/profiles";
 
 // La date n'apparaît pas dans le titre : l'historique du navigateur reste discret.
@@ -49,32 +51,43 @@ export default async function JournalDayPage({ params }: PageProps<"/journal/[da
   const date = parseJournalDateParam(rawDate, today);
   if (!date) notFound();
 
-  const [checkin, adjacent] = await Promise.all([
+  const [checkin, adjacent, substances] = await Promise.all([
     getCheckinForDate(user.id, date),
     getAdjacentCheckinDates(user.id, date),
+    getTrackedSubstances(user.id),
   ]);
 
   if (!checkin?.completedAt) {
-    const isTodayDraft = date === today && checkin !== null;
+    const isToday = date === today;
+    const isDraft = checkin !== null;
+    // Journée passée : check-in possible depuis le début du parcours (ADR-098).
+    const canBackfill = canBackfillCheckin(date, today, getJourneyStartDate(substances));
+    const description = isToday
+      ? isDraft
+        ? "Ton check-in est en cours."
+        : "Aucun check-in enregistré pour cette journée."
+      : canBackfill
+        ? isDraft
+          ? "Ton check-in de cette journée est commencé. Tu peux reprendre là où tu étais."
+          : "Aucun check-in enregistré pour cette journée. Tu peux encore la noter : quelques minutes suffisent. Tant qu'elle n'est pas notée, elle reste non documentée (ni sobre, ni consommation) et ne rompt pas ta série."
+        : "Cette journée précède le début de ton parcours. Tu peux ajuster la date de début dans Mon plan.";
     return (
       <PageContainer size="narrow">
         <BackLink />
-        <StatusMessage
-          icon={NotebookPen}
-          title={formatWeekdayDate(date)}
-          description={
-            isTodayDraft
-              ? "Ton check-in est en cours."
-              : date === today
-                ? "Aucun check-in enregistré pour cette journée."
-                : "Aucun check-in enregistré pour cette journée. Elle reste non documentée : elle ne compte ni comme journée sobre, ni comme consommation, et ne rompt pas ta série. Le check-in se fait le jour même, depuis Aujourd'hui."
-          }
-        >
-          <Button asChild size="lg">
-            <Link href={routes.checkin}>
-              {isTodayDraft ? "Continuer mon check-in" : date === today ? "Faire mon check-in" : "Faire mon check-in d'aujourd'hui"}
-            </Link>
-          </Button>
+        <StatusMessage icon={NotebookPen} title={formatWeekdayDate(date)} description={description}>
+          {isToday ? (
+            <Button asChild size="lg">
+              <Link href={routes.checkin}>{isDraft ? "Continuer mon check-in" : "Faire mon check-in"}</Link>
+            </Button>
+          ) : canBackfill ? (
+            <Button asChild size="lg">
+              <Link href={`${journalDayHref(date)}/edit`}>{isDraft ? "Continuer ce check-in" : "Faire le check-in de cette journée"}</Link>
+            </Button>
+          ) : (
+            <Button asChild size="lg" variant="outline">
+              <Link href={routes.plan}>Ouvrir Mon plan</Link>
+            </Button>
+          )}
         </StatusMessage>
       </PageContainer>
     );

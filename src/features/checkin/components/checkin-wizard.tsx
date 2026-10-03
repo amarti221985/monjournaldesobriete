@@ -19,7 +19,7 @@ import {
 } from "@/features/checkin/actions";
 import { CheckinComplete } from "@/features/checkin/components/checkin-complete";
 import { CheckinSummaryView } from "@/features/checkin/components/checkin-summary-view";
-import { checkinStepContent } from "@/features/checkin/components/step-content";
+import { checkinStepContent, forCheckinDay } from "@/features/checkin/components/step-content";
 import {
   AchievementsStep,
   ConsumptionStep,
@@ -57,6 +57,8 @@ type CheckinWizardProps = {
    * l'enregistrement ou l'annulation. Par défaut : /today.
    */
   returnHref?: string;
+  /** Check-in d'une journée passée (ADR-098) : formulations « ce jour-là ». */
+  isPastDay?: boolean;
 };
 
 type SaveStatus = "idle" | "saved" | "failed";
@@ -77,6 +79,7 @@ export function CheckinWizard({
   catalogues,
   substances,
   returnHref,
+  isPastDay = false,
 }: CheckinWizardProps) {
   const router = useRouter();
   const notifyAchievements = useAchievementNotifier();
@@ -229,7 +232,7 @@ export function CheckinWizard({
       if (mode === "create" && draft.status) {
         await saveCheckinDraftAction(buildCheckinPayload(draft, checkinDate)).catch(() => null);
       }
-      router.push(routes.today);
+      router.push(returnHref ?? routes.today);
     });
   }
 
@@ -272,14 +275,14 @@ export function CheckinWizard({
             tabIndex={-1}
             className="text-2xl font-semibold tracking-tight text-balance outline-none sm:text-3xl"
           >
-            {content.heading}
+            {forCheckinDay(content.heading, isPastDay)}
           </h1>
-          {content.description ? <p className="text-pretty text-muted-foreground">{content.description}</p> : null}
+          {content.description ? <p className="text-pretty text-muted-foreground">{forCheckinDay(content.description, isPastDay)}</p> : null}
         </header>
 
         <div key={stepId} className="animate-in fade-in-0 duration-200">
           {stepId === "status" ? (
-            <StatusStep draft={draft} onChange={update} errors={errors} onStatusChange={handleStatusChange} />
+            <StatusStep draft={draft} onChange={update} errors={errors} onStatusChange={handleStatusChange} isPastDay={isPastDay} />
           ) : null}
           {stepId === "scores" ? <ScoresStep draft={draft} onChange={update} errors={errors} /> : null}
           {stepId === "emotions" ? (
@@ -300,7 +303,7 @@ export function CheckinWizard({
           {stepId === "achievements" ? (
             <AchievementsStep draft={draft} onChange={update} errors={errors} achievements={catalogues.achievements} />
           ) : null}
-          {stepId === "reflection" ? <ReflectionStep draft={draft} onChange={update} errors={errors} /> : null}
+          {stepId === "reflection" ? <ReflectionStep draft={draft} onChange={update} errors={errors} isPastDay={isPastDay} /> : null}
           {isSummary && display ? (
             <CheckinSummaryView
               checkin={display}

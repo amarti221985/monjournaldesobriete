@@ -85,6 +85,9 @@ du brouillon, impression du rapport, formulations), avis bêta minimal, document
 [BETA_CHECKLIST.md](./BETA_CHECKLIST.md), [BETA_ISSUES.md](./BETA_ISSUES.md),
 [BETA_TEST_PLAN.md](./BETA_TEST_PLAN.md).
 
+Ajout après la préparation de la bêta, à la demande du propriétaire : **check-in d'une journée
+passée** (du début du parcours à hier, ADR-098).
+
 **Pas de Sprint 14** : la suite se décide à partir des retours de la bêta fermée (5 à 10 personnes,
 7 jours).
 

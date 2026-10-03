@@ -593,6 +593,7 @@ notifications) **reporté** : aucun service worker ni cache hors ligne.
 | Origine des redirections du callback | `resolveRedirectOrigin()` (`src/lib/auth/redirects.ts`) |
 | CSP en balise meta | `metaContentSecurityPolicy` (`src/config/security-headers.ts`), layout racine |
 | Sauvegarde automatique du brouillon | `CheckinWizard` (`AUTOSAVE_DELAY_MS`) |
+| Check-in d'une journée passée (ADR-098) | `src/app/(app)/journal/[date]/edit/`, `canBackfillCheckin` / `getJourneyStartDate` (`src/features/checkin/logic.ts`), `forCheckinDay` |
 
 Documents : [BETA_CHECKLIST.md](./BETA_CHECKLIST.md), [BETA_ISSUES.md](./BETA_ISSUES.md),
 [BETA_TEST_PLAN.md](./BETA_TEST_PLAN.md).

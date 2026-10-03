@@ -279,3 +279,21 @@ export function buildCheckinPayload(draft: CheckinDraft, checkinDate: string) {
 export function statusChangeDropsEvents(draft: CheckinDraft, nextStatus: CheckinStatus): boolean {
   return draft.status === "consumed" && nextStatus !== "consumed" && draft.consumptionEvents.length > 0;
 }
+
+// ---------------------------------------------------------------------------
+// Check-in d'une journée passée (ADR-098)
+// ---------------------------------------------------------------------------
+
+/** Début du parcours : date de début la plus ancienne des substances suivies. */
+export function getJourneyStartDate(substances: readonly { startedOn: string }[]): string | null {
+  return substances.map((substance) => substance.startedOn).sort()[0] ?? null;
+}
+
+/**
+ * Une journée passée peut recevoir un check-in si elle est antérieure à aujourd'hui (le jour
+ * même passe par /today/checkin) et pas avant le début du parcours. Le futur est refusé par
+ * la base de toute façon.
+ */
+export function canBackfillCheckin(date: string, today: string, journeyStart: string | null): boolean {
+  return journeyStart !== null && date < today && date >= journeyStart;
+}
