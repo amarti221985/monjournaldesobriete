@@ -121,9 +121,12 @@ describe("liens des journées", () => {
     expect(getCalendarDayHref(day("2026-09-24", "draft", true))).toBe("/today/checkin");
   });
 
-  it("journée passée non documentée, futur, avant parcours : non cliquable (pas de check-in rétroactif)", () => {
-    expect(getCalendarDayHref(day("2026-09-13", "untracked"))).toBeNull();
-    expect(getCalendarDayHref(day("2026-09-20", "draft"))).toBeNull();
+  it("journée passée non documentée ou en cours → détail (check-in d'une journée passée, ADR-098)", () => {
+    expect(getCalendarDayHref(day("2026-09-13", "untracked"))).toBe("/journal/2026-09-13");
+    expect(getCalendarDayHref(day("2026-09-20", "draft"))).toBe("/journal/2026-09-20");
+  });
+
+  it("futur et avant le parcours : non cliquables", () => {
     expect(getCalendarDayHref(day("2026-09-30", "future"))).toBeNull();
     expect(getCalendarDayHref(day("2026-08-01", "before_journey"))).toBeNull();
   });

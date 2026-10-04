@@ -1189,3 +1189,12 @@ acceptée : on en ajoute une nouvelle qui la remplace (statut « Remplacée par 
   de build). Le même commit compile localement et dans un clone propre.
 - **Decision** : `npm run build` = `next build --webpack` (pas de processus PostCSS séparé). Le
   développement local garde Turbopack (`next dev`). À réévaluer si l'hébergeur lève la limite.
+
+## ADR-108 — Journées passées cliquables (accès au check-in rétroactif)
+
+- **Contexte** : ADR-098 proposait le check-in depuis le détail d'une journée, mais le calendrier
+  et « Ma semaine » ne liaient pas les journées passées sans check-in (ADR-048) : l'entrée était
+  inaccessible.
+- **Decision** : toute journée passée du parcours (non documentée ou en cours) mène à son détail
+  (`getCalendarDayHref`, carte « Ma semaine »), qui propose « Faire le check-in de cette journée »
+  ou explique qu'elle précède le début du parcours. Futur et avant le parcours restent non cliquables.

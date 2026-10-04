@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getDayStateDisplay } from "@/config/day-status";
 import { routes } from "@/config/routes";
+import { journalDayHref } from "@/features/calendar/logic";
 import { pluralize } from "@/features/progress/format";
 import type { RecentDaysSummary, WeekDay, WeekDayState } from "@/features/progress/week";
 import { formatLocalDate } from "@/lib/dates";
@@ -42,9 +43,10 @@ function DayCell({ day, todayHref }: { day: WeekDay; todayHref: string }) {
 
   const cellClass = "flex flex-col items-center gap-1.5 rounded-xl py-1";
 
-  // Sprint 4 : seule la journée d'aujourd'hui est interactive (check-in).
-  return day.isToday ? (
-    <Link href={todayHref} title={description} className={cn(cellClass, "hover:bg-muted/60")}>
+  // Aujourd'hui → check-in du jour ; journée passée → détail (check-in possible, ADR-098).
+  const href = day.isToday ? todayHref : day.state === "future" ? null : journalDayHref(day.date);
+  return href ? (
+    <Link href={href} title={description} className={cn(cellClass, "hover:bg-muted/60")}>
       {content}
     </Link>
   ) : (

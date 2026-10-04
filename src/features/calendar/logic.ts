@@ -120,11 +120,14 @@ export function buildYear(
   return { months, summary: summarizeDays(months.flatMap((month) => month.days), entries) };
 }
 
-/** Lien d'une journée : check-in terminé → détail ; aujourd'hui → check-in ; sinon aucun (V1). */
+/**
+ * Lien d'une journée : aujourd'hui sans check-in terminé → check-in du jour ; toute autre journée
+ * du parcours → détail (qui propose le check-in d'une journée passée, ADR-098) ; futur et avant
+ * le parcours : aucun.
+ */
 export function getCalendarDayHref(day: CalendarDay): string | null {
   if (day.state === "future" || day.state === "before_journey") return null;
   if (day.isToday && (day.state === "untracked" || day.state === "draft")) return routes.checkin;
-  if (day.state === "draft" || day.state === "untracked") return null;
   return journalDayHref(day.date);
 }
 
