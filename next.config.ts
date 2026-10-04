@@ -8,6 +8,8 @@ const nextConfig: NextConfig = {
     return [
       { source: "/:path*", headers: securityHeaders },
       { source: "/reports/:path*", headers: privateDocumentHeaders },
+      { source: "/admin", headers: privateDocumentHeaders },
+      { source: "/admin/:path*", headers: privateDocumentHeaders },
     ];
   },
 };

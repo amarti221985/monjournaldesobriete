@@ -396,13 +396,20 @@ export async function updateSafePlace(
 
 // --- Rappel et lettre (un par utilisateur : upsert sur user_id) ---------------------
 
+/*
+ * Rappel et lettre : une ligne par personne, enregistrée par mise à jour puis insertion. Pas
+ * d'upsert : ON CONFLICT DO UPDATE réécrirait user_id, colonne volontairement non modifiable
+ * (Sprint 11), ce qui faisait échouer chaque enregistrement (permission refusée).
+ */
+
 export async function saveReminder(userId: string, content: string): Promise<PlanWriteResult> {
+  const scope = "Enregistrement du rappel";
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("personal_reminders")
-    .upsert({ user_id: userId, content }, { onConflict: "user_id" })
-    .select("id");
-  return toResult("Enregistrement du rappel", error, data);
+  const updated = await supabase.from("personal_reminders").update({ content }).eq("user_id", userId).select("id");
+  if (updated.error) return toFailure(scope, updated.error);
+  if ((updated.data ?? []).length > 0) return { ok: true };
+  const inserted = await supabase.from("personal_reminders").insert({ user_id: userId, content }).select("id");
+  return toResult(scope, inserted.error, inserted.data);
 }
 
 export async function deleteReminder(userId: string): Promise<PlanWriteResult> {
@@ -412,12 +419,14 @@ export async function deleteReminder(userId: string): Promise<PlanWriteResult> {
 }
 
 export async function saveLetter(userId: string, input: { title?: string; content: string }): Promise<PlanWriteResult> {
+  const scope = "Enregistrement de la lettre";
+  const fields = { title: input.title ?? null, content: input.content };
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("self_letters")
-    .upsert({ user_id: userId, title: input.title ?? null, content: input.content }, { onConflict: "user_id" })
-    .select("id");
-  return toResult("Enregistrement de la lettre", error, data);
+  const updated = await supabase.from("self_letters").update(fields).eq("user_id", userId).select("id");
+  if (updated.error) return toFailure(scope, updated.error);
+  if ((updated.data ?? []).length > 0) return { ok: true };
+  const inserted = await supabase.from("self_letters").insert({ user_id: userId, ...fields }).select("id");
+  return toResult(scope, inserted.error, inserted.data);
 }
 
 export async function deleteLetter(userId: string): Promise<PlanWriteResult> {

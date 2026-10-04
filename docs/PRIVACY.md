@@ -56,6 +56,10 @@ Aucune donnée stockée sans usage identifiée.
 | Préférences et consentement IA | `ai_preferences` | `user_id` | faible | oui (sans compteur) | oui (cascade) |
 | Bilans intelligents (résultat validé seulement) | `ai_reflections` | `user_id` | oui | oui | oui (cascade) |
 | Avis bêta (écrits volontairement) | `beta_feedback` | `user_id` | moyen | oui | oui (cascade) |
+| Événements produit (liste fermée, sans métadonnée) | `product_events` | `user_id` | faible | oui | oui (cascade) |
+| Rôle d'administration | `admin_users` | `user_id` | faible | non (interne) | oui (cascade) |
+| Exclusion des statistiques (comptes de test) | `analytics_excluded_users` | `user_id` | faible | non (interne) | oui (cascade) |
+| Journal d'audit de l'administration | `admin_audit_log` | admin (`admin_user_id`) | faible | non (interne) | identifiant de l'admin mis à NULL |
 | Catalogues | `substances`, `emotions`, `trigger_types`, `achievement_types`, `craving_strategies`, `achievement_definitions` | système | non | libellés utilisés seulement | non (communs) |
 
 ## Stockage et tiers techniques
@@ -67,8 +71,8 @@ Aucune donnée stockée sans usage identifiée.
 - **Resend** (envoi de courriels) : seulement si configuré, pour prévenir le propriétaire d'un avis
   bêta. Contenu : type, section et message écrits par la personne ; jamais son adresse, son
   identifiant ni son journal (ADR-097).
-- Aucun autre service : pas d'analytique, de relecture de session, de publicité ni de CDN tiers
-  pour les données. Polices servies par l'application.
+- Aucun autre service : pas d'analytique tierce, de relecture de session, de publicité ni de CDN
+  tiers pour les données. Polices servies par l'application.
 
 ## Accès, export, suppression
 
@@ -104,6 +108,17 @@ sûrs, rappel, raison, notes libres, précisions « Autre », quantités. **Jama
 jeu de données envoyé, réponse brute. **Jamais journalisés** : prompt, jeu de données, réponse,
 journal. La rétention côté fournisseur suit la politique d'Anthropic pour l'API. Désactivation,
 suppression d'un bilan ou de tous les bilans à tout moment ; tout est supprimé avec le compte.
+
+## Statistiques internes (administration)
+
+Le propriétaire dispose d'un tableau de bord interne (`/admin`, [ADMIN.md](./ADMIN.md)) :
+**agrégats** calculés à la demande dans Supabase (inscriptions, activation, activité, rétention,
+utilisation des fonctionnalités), aucun outil tiers. Il ne lit jamais le contenu du journal
+(réflexions, notes, contextes, lettre, raison, lieux, contacts, bilans IA). Les comptes y sont
+pseudonymisés ; le courriel n'est affiché qu'à la demande, pour le support, et cette consultation
+est journalisée. Seul le message des avis bêta, écrit volontairement, est lisible. Les événements
+produit (`plan_updated`, `pdf_report_launched`) ne contiennent ni texte ni métadonnée, figurent
+dans l'export et sont supprimés avec le compte, comme toute contribution aux statistiques.
 
 ## Hors périmètre actuel
 

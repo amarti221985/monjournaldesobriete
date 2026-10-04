@@ -88,6 +88,10 @@ du brouillon, impression du rapport, formulations), avis bêta minimal, document
 Ajout après la préparation de la bêta, à la demande du propriétaire : **check-in d'une journée
 passée** (du début du parcours à hier, ADR-098).
 
+Ajout pendant la bêta, à la demande du propriétaire : **tableau de bord d'administration V1**
+(statistiques agrégées, rétention, avis ; aucun contenu privé, aucun outil tiers) —
+[ADMIN.md](./ADMIN.md).
+
 **Pas de Sprint 14** : la suite se décide à partir des retours de la bêta fermée (5 à 10 personnes,
 7 jours).
 

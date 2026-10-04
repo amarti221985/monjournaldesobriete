@@ -41,7 +41,8 @@ declare
     ['craving_event_triggers', 'user_id'], ['craving_interventions', 'user_id'],
     ['user_personal_triggers', 'user_id'], ['user_personal_strategies', 'user_id'], ['safe_places', 'user_id'],
     ['personal_reminders', 'user_id'], ['self_letters', 'user_id'], ['user_achievements', 'user_id'],
-    ['ai_preferences', 'user_id'], ['ai_reflections', 'user_id'], ['beta_feedback', 'user_id']
+    ['ai_preferences', 'user_id'], ['ai_reflections', 'user_id'], ['beta_feedback', 'user_id'],
+    ['product_events', 'user_id']
   ];
   -- Une colonne modifiable (droit UPDATE accordé) par table, pour le test de modification.
   v_updatable text[][] := array[
@@ -93,6 +94,7 @@ begin
     perform public.save_ai_reflection(v_today - 6, v_today, 'Bilan fictif de la semaine.', '{"summary":"Bilan fictif de la semaine."}'::jsonb,
       'test', 'modele-fictif', 'weekly-reflection-v1');
     insert into public.beta_feedback (user_id, category, message) values (v_owner::uuid, 'suggestion', 'Avis fictif.');
+    perform public.record_product_event('plan_updated');
   end loop;
   select id into v_checkin_b from public.daily_checkins where user_id = user_b;
 
@@ -106,7 +108,7 @@ begin
     if v_count = 0 then raise exception 'ÉCHEC 1 : aucune ligne de A dans %', v_owned[i][1]; end if;
   end loop;
 
-  -- 2. SELECT : A ne lit aucune ligne de B (25 tables)
+  -- 2. SELECT : A ne lit aucune ligne de B (26 tables)
   for i in 1..array_length(v_owned, 1) loop
     execute format('select count(*) from public.%I where %I = $1', v_owned[i][1], v_owned[i][2]) into v_count using user_b;
     if v_count <> 0 then raise exception 'ÉCHEC 2 : A lit % ligne(s) de B dans %', v_count, v_owned[i][1]; end if;

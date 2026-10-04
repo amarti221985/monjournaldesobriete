@@ -302,7 +302,7 @@ ne sont jamais lus par les statistiques.
 | références vers `user_substances` (`consumption_events`, `craving_event_substances`) | — | `(user_substance_id, user_id)` | NO ACTION **différée** (supprimées par les cascades avant le commit) |
 | références vers les catalogues | — | `emotions`, `trigger_types`, … | NO ACTION (catalogues jamais supprimés) |
 
-RLS activée sur les 32 tables (dont `ai_generation_reservations`, sans aucun droit client) ; policies `(select auth.uid()) = user_id` (ou `id`) par opération
+RLS activée sur les 36 tables (dont `ai_generation_reservations`, `admin_users`, `analytics_excluded_users` et `admin_audit_log`, sans aucun droit client) ; policies `(select auth.uid()) = user_id` (ou `id`) par opération
 accordée ; catalogues en lecture seule ; `user_achievements` en lecture seule.
 
 ### Vérifier la sécurité
@@ -311,7 +311,7 @@ accordée ; catalogues en lecture seule ; `user_achievements` en lecture seule.
 npx supabase db query --linked -f supabase/tests/security_rls.sql
 ```
 
-Résultat attendu : `RLS_OK — security : 16 vérifications réussies` (jeu complet sur 25 tables ;
+Résultat attendu : `RLS_OK — security : 16 vérifications réussies` (jeu complet sur 26 tables, dont `product_events` ;
 lecture, modification, suppression et insertion croisées refusées ; références croisées ; RPC avec
 UUID devinés ; affectation de masse ; dates futures ; 7e substance ; fuseau ; droits des fonctions ;
 suppression non authentifiée refusée ; suppression de A : 0 ligne restante, B intact).
@@ -325,6 +325,32 @@ suppression non authentifiée refusée ; suppression de A : 0 ligne restante, B 
 RLS propriétaire, aucune modification ni suppression par le client ; déclencheur
 `enforce_beta_feedback_rate` (20 avis / 24 h). Test : `supabase/tests/beta_feedback_rls.sql`
 (`RLS_OK — beta_feedback : 10 vérifications réussies`).
+
+### Administration — migration `20261006090000_admin_dashboard.sql`
+
+| Table | Rôle | Droits du client |
+| --- | --- | --- |
+| `admin_users` | `user_id` (PK) → `auth.users` CASCADE, `role` (owner, admin) | aucun |
+| `analytics_excluded_users` | `user_id` (PK) → `auth.users` CASCADE, `reason` (1–200) | aucun |
+| `product_events` | `user_id` → `auth.users` CASCADE, `event_name` (plan_updated, pdf_report_launched), `occurred_at`, `occurred_on` ; unique (user_id, event_name, occurred_on) | select (propriétaire) |
+| `admin_audit_log` | `admin_user_id` → `auth.users` SET NULL, `action`, `target_type`, `target_id` | aucun |
+
+`beta_feedback` gagne `status` (new, reviewed, resolved) et `status_updated_at`. Index :
+`product_events_occurred_idx`, `beta_feedback_created_idx`. Fonctions : `is_admin()`,
+`record_product_event(text)`, `admin_overview`, `admin_timeseries`, `admin_funnel`,
+`admin_retention`, `admin_feature_adoption`, `admin_users_page`, `admin_user_detail`,
+`admin_reveal_account_email`, `admin_feedback_page`, `admin_set_feedback_status` (SECURITY
+DEFINER, rôle vérifié en premier) ; schéma privé `admin_private` (`assert_admin`,
+`product_users`, `meaningful_activity`, `user_code`). Aucune table d'agrégats. Détails et
+définitions : [ADMIN.md](./ADMIN.md).
+
+```bash
+npx supabase db query --linked -f supabase/tests/admin_rls.sql
+```
+
+Résultat attendu : `RLS_OK — admin : 30 vérifications réussies (…)` (refus pour un non-admin,
+table des rôles illisible, exclusions, définitions, rétention, absence de contenu privé, audit,
+suppression de comptes, performance sur 1 000 comptes).
 
 ### Bilans intelligents — migration `20261002090000_create_ai_insights.sql`
 

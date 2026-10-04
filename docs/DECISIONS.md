@@ -1126,3 +1126,58 @@ acceptée : on en ajoute une nouvelle qui la remplace (statut « Remplacée par 
   « le lendemain »). Avant le début du parcours : explication et lien vers Mon plan (date de début
   modifiable). Aucun marqueur « ajouté plus tard » : une journée notée compte comme toute journée
   enregistrée (séries, statistiques, accomplissements).
+
+## ADR-099 — Rôle d'administration dans une table dédiée
+
+- **Decision** : `admin_users (user_id, role owner|admin)`, RLS sans aucun droit client, lue
+  uniquement par `is_admin()` (SECURITY DEFINER sans paramètre). Pas de colonne dans `profiles`
+  (modifiable par son propriétaire), pas de liste de courriels dans le code ou l'environnement.
+  Propriétaire créé au SQL Editor ; aucune interface de gestion en V1 ; cascade à la suppression.
+
+## ADR-100 — Analytique « agrégats d'abord » par RPC
+
+- **Decision** : chaque indicateur est calculé à la demande par une RPC `admin_*` SECURITY DEFINER
+  qui vérifie le rôle en premier et ne renvoie que des comptes ou des listes pseudonymisées. Aucun
+  calcul sur des lignes brutes côté Next.js, aucune table d'agrégats (cohérent avec ADR-042).
+  Fonctions internes dans le schéma non exposé `admin_private`.
+
+## ADR-101 — L'administration ne voit aucun contenu privé
+
+- **Decision** : réflexions, notes, contexte de consommation ou d'envie, stratégies écrites, lettre,
+  raison, lieux sûrs, contacts, bilans, prompts et jeux de données IA ne sortent d'aucune RPC admin.
+  Comptes désignés par un pseudonyme (`Utilisateur #XXXXXXXX`) ; le courriel n'est révélé qu'à la
+  demande, pour le support, et la consultation est journalisée (`admin_audit_log`). Exception : le
+  message d'un avis bêta, écrit volontairement pour l'équipe.
+
+## ADR-102 — Activité significative : jamais une page vue ni une connexion
+
+- **Decision** : une personne est active si elle termine un check-in, modifie un check-in plus d'une
+  minute après sa fin, termine un moment d'envie, met à jour son plan, lance le rapport PDF, enregistre
+  un bilan IA ou envoie un avis. Les deux seuls événements nouveaux (`product_events`) forment une
+  liste fermée, sans métadonnée, au plus un par jour et par type. Aucun suivi de pages.
+
+## ADR-103 — Pas d'entrepôt caché des comptes supprimés
+
+- **Decision** : les statistiques sont recalculées depuis les tables vivantes ; un compte supprimé
+  en disparaît (cascades), y compris ses événements produit. Le journal d'audit garde l'action mais
+  l'identifiant de l'admin passe à NULL si son compte est supprimé.
+
+## ADR-104 — Comptes admin et de test exclus des statistiques
+
+- **Decision** : `admin_private.product_users()` écarte toujours `admin_users` et
+  `analytics_excluded_users` (comptes de test, ajoutés au SQL Editor). Leurs avis restent visibles,
+  marqués « Compte admin ou de test ».
+
+## ADR-105 — Aucun outil d'analytique tiers
+
+- **Decision** : précise ADR-096 — aucun pixel, SDK, relecture de session ni service externe ; le
+  tableau de bord est interne, servi par l'application et Supabase, `no-store` et `noindex`.
+  Aucune métrique de paiement en V1.
+
+## ADR-106 — Rappel et lettre : mise à jour puis insertion (pas d'upsert)
+
+- **Contexte** : depuis le durcissement du Sprint 11, `user_id` n'a pas de droit UPDATE ; un upsert
+  (`ON CONFLICT DO UPDATE`) est donc refusé (42501) et l'enregistrement du rappel et de la lettre
+  échouait en production.
+- **Decision** : `saveReminder` / `saveLetter` mettent à jour la ligne de l'utilisateur, puis
+  insèrent si aucune ligne n'a été modifiée. Les droits restent minimaux.

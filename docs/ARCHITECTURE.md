@@ -92,6 +92,7 @@ fonctionnalité concernée, et une fonctionnalité par dossier dans `src/feature
 | `(auth)` | Connexion, inscription, mot de passe oublié, nouveau mot de passe. | Marque + carte centrée, retour à l'accueil |
 | `(onboarding)` | Configuration du parcours (`/onboarding`), obligatoire avant l'application. | Marque + menu du compte, sans navigation |
 | `(app)` | Application authentifiée (`/today`). | `AppShell` (sidebar desktop, barre inférieure mobile, menu utilisateur) |
+| `(admin)` | Administration (`/admin`), réservée aux comptes de `admin_users`. | Barre latérale admin (desktop), barre supérieure (mobile), badge « Admin » |
 
 Un seul layout racine (`src/app/layout.tsx`). La navigation de l'app n'affiche en lien que les
 sections disponibles (`available: true` dans `src/config/navigation.ts`) ; les autres sont
@@ -597,6 +598,20 @@ notifications) **reporté** : aucun service worker ni cache hors ligne.
 
 Documents : [BETA_CHECKLIST.md](./BETA_CHECKLIST.md), [BETA_ISSUES.md](./BETA_ISSUES.md),
 [BETA_TEST_PLAN.md](./BETA_TEST_PLAN.md).
+
+## Administration (Admin V1)
+
+| Élément | Emplacement |
+| --- | --- |
+| Pages | `src/app/(admin)/admin/` (vue d'ensemble, `analytics`, `retention`, `users`, `users/[code]`, `feedback`) |
+| Définitions pures et tests | `src/features/admin/analytics/definitions.ts` |
+| Composants, Server Actions | `src/features/admin/components/`, `src/features/admin/actions.ts` |
+| RPC typées | `src/lib/services/admin.ts` |
+| Rôle | `src/lib/auth/admin.ts` (`requireAdmin`, `getIsAdmin`), proxy (`getIsAdmin` dans `src/lib/supabase/proxy.ts`) |
+| Événements produit | `src/lib/services/product-events.ts` (plan, rapport PDF via `src/features/reports/actions.ts`) |
+
+Toutes les statistiques viennent de RPC agrégées (aucun calcul sur des lignes brutes côté Next.js,
+aucune table d'agrégats). Voir [ADMIN.md](./ADMIN.md).
 
 ## Conventions de composants
 

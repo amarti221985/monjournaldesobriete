@@ -108,7 +108,7 @@ const SUBSTANCE = "user_substances ( custom_name, substances ( name_fr ) )";
  */
 export async function collectExportData(userId: string): Promise<ExportSource> {
   const supabase = await createClient();
-  const [auth, profile, substances, reasons, motivations, contacts, checkins, cravings, triggers, strategies, places, reminder, letter, achievements, aiPreferences, aiReflections, betaFeedback] =
+  const [auth, profile, substances, reasons, motivations, contacts, checkins, cravings, triggers, strategies, places, reminder, letter, achievements, aiPreferences, aiReflections, betaFeedback, productEvents] =
     await Promise.all([
       supabase.auth.getUser(),
       supabase.from("profiles").select("display_name, timezone, onboarding_completed, created_at").eq("id", userId).maybeSingle(),
@@ -175,9 +175,10 @@ export async function collectExportData(userId: string): Promise<ExportSource> {
         .eq("user_id", userId)
         .order("period_end"),
       supabase.from("beta_feedback").select("category, message, page_context, created_at").eq("user_id", userId).order("created_at"),
+      supabase.from("product_events").select("event_name, occurred_on").eq("user_id", userId).order("occurred_on"),
     ]);
 
-  const failed = [profile, substances, reasons, motivations, contacts, checkins, cravings, triggers, strategies, places, reminder, letter, achievements, aiPreferences, aiReflections, betaFeedback].find(
+  const failed = [profile, substances, reasons, motivations, contacts, checkins, cravings, triggers, strategies, places, reminder, letter, achievements, aiPreferences, aiReflections, betaFeedback, productEvents].find(
     (result) => result.error,
   );
   if (failed?.error) {
@@ -203,6 +204,7 @@ export async function collectExportData(userId: string): Promise<ExportSource> {
     aiPreferences: aiPreferences.data,
     aiReflections: aiReflections.data ?? [],
     betaFeedback: betaFeedback.data ?? [],
+    productEvents: productEvents.data ?? [],
   };
 }
 

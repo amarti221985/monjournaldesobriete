@@ -67,6 +67,13 @@ Règles essentielles :
   CSP aussi en meta (le CDN de l'hébergeur remplace l'en-tête) ; pas de Sprint 14 avant les retours.
 - Calendrier : champs minimaux seulement ; journal : `search_journal` (côté base, paginé) ; le terme
   recherché ne va jamais dans l'URL ni dans les journaux.
+- Admin (`docs/ADMIN.md`) : rôle dans `admin_users` (aucun droit client, aucune UI de gestion) ;
+  `requireAdmin()` dans chaque page admin + 307 du proxy ; statistiques UNIQUEMENT via les RPC
+  `admin_*` (agrégats, rôle vérifié en premier, helpers dans `admin_private`) ; jamais de contenu
+  privé, d'usurpation, de suppression ni de modification de données ; comptes pseudonymisés,
+  courriel révélé seulement par `admin_reveal_account_email` (audité) ; admins et exclusions hors
+  statistiques ; `product_events` = liste fermée sans métadonnée via `record_product_event` ;
+  activité significative jamais une page vue ; aucun analytique tiers ni table d'agrégats.
 - Chemins via `src/config/routes.ts` ; redirections via `getSafeRedirect()`.
 - Ne jamais journaliser courriel, mot de passe, jeton, cookie ni contenu personnel.
 - Journée locale (`date`) séparée des timestamps UTC (ADR-006).

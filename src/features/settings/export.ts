@@ -93,6 +93,7 @@ export type ExportSource = {
     revoked_at: string | null;
   } | null;
   betaFeedback?: { category: string; message: string; page_context: string | null; created_at: string }[];
+  productEvents?: { event_name: string; occurred_on: string }[];
   aiReflections?: { period_start: string; period_end: string; type: string; summary: string; content: unknown; model: string | null; prompt_version: string; generated_at: string }[];
 };
 
@@ -225,6 +226,7 @@ export function buildDataExport(source: ExportSource, exportedAt: Date = new Dat
     })),
     // Bilans intelligents : préférences et bilans conservés (jamais de clé, de prompt ni de réponse brute).
     beta_feedback: (source.betaFeedback ?? []).map((row) => ({ ...row })),
+    product_events: (source.productEvents ?? []).map((row) => ({ ...row })),
     ai: {
       preferences: source.aiPreferences ?? null,
       reflections: (source.aiReflections ?? []).map((row) => ({ ...row })),

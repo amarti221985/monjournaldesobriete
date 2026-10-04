@@ -1,6 +1,6 @@
 "use client";
 
-import { Award, ChevronDown, LogOut, MessageSquareText, Settings, Sparkles } from "lucide-react";
+import { Award, ChevronDown, LogOut, MessageSquareText, Settings, Sparkles, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useTransition } from "react";
 
@@ -19,6 +19,8 @@ import { signOutAction } from "@/features/auth/actions";
 type UserMenuProps = {
   displayName: string | null;
   email: string | null;
+  /** Lien vers l'administration (le rôle est revérifié côté serveur sur chaque page admin). */
+  isAdmin?: boolean;
 };
 
 function getInitial(displayName: string | null, email: string | null) {
@@ -26,7 +28,7 @@ function getInitial(displayName: string | null, email: string | null) {
   return source.trim().charAt(0).toLocaleUpperCase("fr") || "?";
 }
 
-export function UserMenu({ displayName, email }: UserMenuProps) {
+export function UserMenu({ displayName, email, isAdmin = false }: UserMenuProps) {
   const [isSigningOut, startSignOut] = useTransition();
 
   return (
@@ -69,6 +71,14 @@ export function UserMenu({ displayName, email }: UserMenuProps) {
             Donner mon avis
           </Link>
         </DropdownMenuItem>
+        {isAdmin ? (
+          <DropdownMenuItem asChild className="min-h-10">
+            <Link href={routes.admin}>
+              <ShieldCheck aria-hidden="true" />
+              Administration
+            </Link>
+          </DropdownMenuItem>
+        ) : null}
         <DropdownMenuItem asChild className="min-h-10">
           <Link href={routes.settings}>
             <Settings aria-hidden="true" />

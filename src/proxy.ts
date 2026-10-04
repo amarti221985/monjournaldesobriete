@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { needsOnboardingState, resolveProxyRedirect } from "@/lib/auth/redirects";
+import { routes } from "@/config/routes";
+import { isPathWithin, needsOnboardingState, resolveProxyRedirect } from "@/lib/auth/redirects";
 import { EnvValidationError } from "@/lib/env";
 import { redirectWithSession, updateSession } from "@/lib/supabase/proxy";
 
@@ -40,9 +41,14 @@ export async function proxy(request: NextRequest) {
     onboardingCompleted,
   });
 
-  return destination
-    ? redirectWithSession(request, session.response, destination)
-    : session.response;
+  if (destination) return redirectWithSession(request, session.response, destination);
+
+  // Administration : un compte non admin est renvoyé vers son espace (vraie redirection 307).
+  // La protection réelle reste requireAdmin() dans chaque page et la vérification de chaque RPC.
+  if (session.isAuthenticated && isPathWithin(pathname, routes.admin) && !(await session.getIsAdmin())) {
+    return redirectWithSession(request, session.response, routes.today);
+  }
+  return session.response;
 }
 
 export const config = {

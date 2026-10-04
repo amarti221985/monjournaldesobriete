@@ -100,7 +100,21 @@ npx supabase db query --linked -f supabase/tests/craving_rls.sql
 npx supabase db query --linked -f supabase/tests/plan_rls.sql
 npx supabase db query --linked -f supabase/tests/achievements_rls.sql
 npx supabase db query --linked -f supabase/tests/security_rls.sql
+npx supabase db query --linked -f supabase/tests/admin_rls.sql
 ```
+
+### Administration
+
+L'espace `/admin` (statistiques agrégées, sans contenu privé) est réservé aux comptes de la table
+`admin_users`. Créer le propriétaire une seule fois dans le SQL Editor de Supabase (ne jamais
+écrire le courriel dans Git) :
+
+```sql
+insert into public.admin_users (user_id, role)
+select id, 'owner' from auth.users where email = '<ton courriel>';
+```
+
+Détails, définitions et exclusion des comptes de test : [docs/ADMIN.md](docs/ADMIN.md).
 Schéma et conventions : [docs/DATABASE.md](docs/DATABASE.md).
 
 ## Build
@@ -136,5 +150,6 @@ Aucune dépendance à Vercel : l'app est un serveur Node standard.
 - [docs/SECURITY.md](docs/SECURITY.md) / [docs/PRIVACY.md](docs/PRIVACY.md) — sécurité, carte des données
 - [docs/AI.md](docs/AI.md) — bilans intelligents (consentement, minimisation, garde-fous)
 - [docs/PDF_EXPORT.md](docs/PDF_EXPORT.md) — rapport PDF
+- [docs/ADMIN.md](docs/ADMIN.md) — tableau de bord d'administration (statistiques agrégées)
 - [docs/BETA_CHECKLIST.md](docs/BETA_CHECKLIST.md), [docs/BETA_ISSUES.md](docs/BETA_ISSUES.md), [docs/BETA_TEST_PLAN.md](docs/BETA_TEST_PLAN.md) — bêta V1
 - [docs/MASTER_PROMPT.md](docs/MASTER_PROMPT.md) — cahier des charges maître

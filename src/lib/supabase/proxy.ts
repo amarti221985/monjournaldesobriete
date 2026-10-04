@@ -50,6 +50,12 @@ export async function updateSession(request: NextRequest) {
       if (error) return undefined;
       return profile?.onboarding_completed ?? false;
     },
+    /** Rôle admin (is_admin(), auth.uid()) — défense en profondeur, revérifié par chaque page et RPC. */
+    getIsAdmin: async (): Promise<boolean> => {
+      if (!userId) return false;
+      const { data: isAdmin, error } = await supabase.rpc("is_admin");
+      return !error && isAdmin === true;
+    },
   };
 }
 

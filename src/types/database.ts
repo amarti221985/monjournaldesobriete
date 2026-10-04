@@ -89,6 +89,51 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_audit_log: {
+        Row: {
+          action: string
+          admin_user_id: string | null
+          created_at: string
+          id: string
+          target_id: string | null
+          target_type: string
+        }
+        Insert: {
+          action: string
+          admin_user_id?: string | null
+          created_at?: string
+          id?: string
+          target_id?: string | null
+          target_type: string
+        }
+        Update: {
+          action?: string
+          admin_user_id?: string | null
+          created_at?: string
+          id?: string
+          target_id?: string | null
+          target_type?: string
+        }
+        Relationships: []
+      }
+      admin_users: {
+        Row: {
+          created_at: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          role: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       ai_generation_reservations: {
         Row: {
           previous_generation_at: string | null
@@ -197,6 +242,24 @@ export type Database = {
         }
         Relationships: []
       }
+      analytics_excluded_users: {
+        Row: {
+          created_at: string
+          reason: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          reason: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          reason?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       beta_feedback: {
         Row: {
           category: string
@@ -204,6 +267,8 @@ export type Database = {
           id: string
           message: string
           page_context: string | null
+          status: string
+          status_updated_at: string | null
           user_id: string
         }
         Insert: {
@@ -212,6 +277,8 @@ export type Database = {
           id?: string
           message: string
           page_context?: string | null
+          status?: string
+          status_updated_at?: string | null
           user_id: string
         }
         Update: {
@@ -220,6 +287,8 @@ export type Database = {
           id?: string
           message?: string
           page_context?: string | null
+          status?: string
+          status_updated_at?: string | null
           user_id?: string
         }
         Relationships: []
@@ -815,6 +884,30 @@ export type Database = {
         }
         Relationships: []
       }
+      product_events: {
+        Row: {
+          event_name: string
+          id: string
+          occurred_at: string
+          occurred_on: string
+          user_id: string
+        }
+        Insert: {
+          event_name: string
+          id?: string
+          occurred_at?: string
+          occurred_on?: string
+          user_id: string
+        }
+        Update: {
+          event_name?: string
+          id?: string
+          occurred_at?: string
+          occurred_on?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -1203,6 +1296,135 @@ export type Database = {
         }[]
       }
       add_user_substance: { Args: { payload: Json }; Returns: string }
+      admin_feature_adoption: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          feature: string
+          users: number
+        }[]
+      }
+      admin_feedback_page: {
+        Args: {
+          p_category: string
+          p_limit: number
+          p_offset: number
+          p_status: string
+        }
+        Returns: {
+          category: string
+          code: string
+          created_at: string
+          excluded: boolean
+          id: string
+          message: string
+          page_context: string
+          status: string
+          total_count: number
+        }[]
+      }
+      admin_funnel: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          active_j7: number
+          first_checkin: number
+          j7_eligible: number
+          onboarded: number
+          returned: number
+          signups: number
+        }[]
+      }
+      admin_overview: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          active_users: number
+          active_users_30d: number
+          active_users_7d: number
+          ai_reflections_period: number
+          ai_reflections_total: number
+          checkins: number
+          checkins_7d: number
+          feedback_period: number
+          feedback_total: number
+          first_checkin_total: number
+          new_users: number
+          new_users_7d: number
+          onboarded_total: number
+          pdf_reports_period: number
+          pdf_reports_total: number
+          total_users: number
+          users_3_checkins: number
+          users_7_checkins: number
+        }[]
+      }
+      admin_retention: {
+        Args: never
+        Returns: {
+          cohort_week: string
+          e1: number
+          e14: number
+          e3: number
+          e30: number
+          e7: number
+          r1: number
+          r14: number
+          r3: number
+          r30: number
+          r7: number
+          signups: number
+        }[]
+      }
+      admin_reveal_account_email: { Args: { p_code: string }; Returns: string }
+      admin_set_feedback_status: {
+        Args: { p_id: string; p_status: string }
+        Returns: boolean
+      }
+      admin_timeseries: {
+        Args: { p_bucket: string; p_from: string; p_to: string }
+        Returns: {
+          active_users: number
+          bucket: string
+          checkins: number
+          signups: number
+        }[]
+      }
+      admin_user_detail: {
+        Args: { p_code: string }
+        Returns: {
+          checkins: number
+          code: string
+          feedback_count: number
+          first_checkin_at: string
+          last_activity_at: string
+          onboarded: boolean
+          signed_up_at: string
+          used_achievements: boolean
+          used_ai: boolean
+          used_checkin: boolean
+          used_craving: boolean
+          used_pdf: boolean
+          used_plan: boolean
+        }[]
+      }
+      admin_users_page: {
+        Args: {
+          p_active_days: number
+          p_filter: string
+          p_inactive_days: number
+          p_limit: number
+          p_new_days: number
+          p_offset: number
+          p_sort: string
+        }
+        Returns: {
+          checkins: number
+          code: string
+          first_checkin_at: string
+          last_activity_at: string
+          onboarded: boolean
+          signed_up_at: string
+          total_count: number
+        }[]
+      }
       award_achievements: { Args: never; Returns: Json }
       award_achievements_for: {
         Args: { p_user_id: string }
@@ -1228,6 +1450,7 @@ export type Database = {
         Returns: undefined
       }
       get_achievement_progress: { Args: never; Returns: Json }
+      is_admin: { Args: never; Returns: boolean }
       latest_allowed_local_date: { Args: never; Returns: string }
       lock_own_craving_event: {
         Args: { p_event_id: string }
@@ -1253,6 +1476,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      record_product_event: { Args: { p_event: string }; Returns: undefined }
       release_ai_generation: {
         Args: { p_reservation: string }
         Returns: boolean

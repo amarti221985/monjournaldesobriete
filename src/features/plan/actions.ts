@@ -25,6 +25,7 @@ import {
 } from "@/features/plan/schemas";
 import { getCurrentUser } from "@/lib/auth/session";
 import { awardAchievements, type AwardResult } from "@/lib/services/achievements";
+import { recordProductEvent } from "@/lib/services/product-events";
 import { getLatestAllowedLocalDate } from "@/lib/dates";
 import {
   addPersonalStrategy,
@@ -76,6 +77,8 @@ async function done(
   if (result.ok) {
     revalidatePath(routes.plan);
     revalidatePath(routes.craving, "layout");
+    // Mesure produit (Admin V1) : « plan modifié », sans aucun contenu.
+    await recordProductEvent("plan_updated");
     // Point d'évaluation : modification du plan (idempotent).
     return { status: "ok", achievements: await awardAchievements() };
   }

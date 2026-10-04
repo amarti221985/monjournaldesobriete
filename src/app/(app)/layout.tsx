@@ -6,6 +6,7 @@ import { AchievementNotifierProvider } from "@/features/achievements/components/
 import { CravingCta } from "@/features/craving/components/craving-cta";
 import { TimezoneSync } from "@/features/profile/components/timezone-sync";
 import { getAppAccessRedirect } from "@/lib/auth/redirects";
+import { getIsAdmin } from "@/lib/auth/admin";
 import { requireUser } from "@/lib/auth/session";
 import { getUserToday } from "@/lib/dates";
 import { getActiveCravingEventId } from "@/lib/services/craving";
@@ -23,7 +24,10 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   if (onboardingRedirect) redirect(onboardingRedirect);
 
   // CTA global du mode envie (Sprint 7) : reprend le moment en cours d'aujourd'hui s'il existe.
-  const activeCravingEventId = await getActiveCravingEventId(user.id, getUserToday(profile?.timezone));
+  const [activeCravingEventId, isAdmin] = await Promise.all([
+    getActiveCravingEventId(user.id, getUserToday(profile?.timezone)),
+    getIsAdmin(),
+  ]);
 
   return (
     <AppShell
@@ -31,7 +35,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
       headerActions={
         <>
           <CravingCta variant="header" activeEventId={activeCravingEventId} />
-          <UserMenu displayName={profile?.display_name ?? null} email={user.email} />
+          <UserMenu displayName={profile?.display_name ?? null} email={user.email} isAdmin={isAdmin} />
         </>
       }
     >

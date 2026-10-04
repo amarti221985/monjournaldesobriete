@@ -19,6 +19,12 @@ export const routes = {
   insights: "/insights",
   // Avis des bêta-testeurs (Sprint 13)
   feedback: "/feedback",
+  // Administration (Admin V1)
+  admin: "/admin",
+  adminAnalytics: "/admin/analytics",
+  adminRetention: "/admin/retention",
+  adminUsers: "/admin/users",
+  adminFeedback: "/admin/feedback",
   // Onboarding (Sprint 2)
   onboarding: "/onboarding",
   // Application authentifiée
@@ -52,6 +58,7 @@ export const protectedRoutePrefixes: readonly string[] = [
   routes.achievements,
   routes.insights,
   routes.feedback,
+  routes.admin,
   "/reports",
   routes.plan,
   routes.settings,

@@ -156,6 +156,23 @@ personnelles ni dans `auth.users`, l'autre utilisateur intact.
 - Hostinger : le CDN remplace l'en-tête CSP ; la même politique est livrée en balise meta (ADR-094).
   Les autres en-têtes (`X-Frame-Options`, HSTS, `no-store`, `X-Robots-Tag`) arrivent intacts.
 
+## 7 quater. Administration (Admin V1, [ADMIN.md](./ADMIN.md))
+
+- Rôle dans `admin_users` (RLS, aucun droit client) ; `is_admin()` SECURITY DEFINER sans paramètre ;
+  aucune auto-promotion, aucune interface de gestion des admins. Propriétaire créé au SQL Editor.
+- Frontière en quatre couches : proxy (307 vers `/today` pour un non-admin), `requireAdmin()` dans
+  le layout et chaque page, Server Actions (session + rôle + zod), RPC qui vérifient le rôle en
+  premier (`admin_private.assert_admin()`, `admin_required`). Fonctions internes dans le schéma
+  `admin_private`, non exposé et non exécutable par les clients.
+- Agrégats seulement ; liste des comptes pseudonymisée ; courriel révélé à la demande et journalisé
+  (`admin_audit_log`, comme le changement de statut d'un avis). Aucune lecture du journal, aucune
+  usurpation, aucune suppression ni modification de données utilisateur, jamais de `service_role`.
+- `product_events` : insertion par `record_product_event` seulement (liste fermée, une par jour).
+- `/admin` : `no-store` + `noindex`. Test : `supabase/tests/admin_rls.sql` (30 vérifications).
+- Correctif : `saveReminder` / `saveLetter` utilisaient un upsert (`ON CONFLICT DO UPDATE`) refusé
+  depuis le durcissement du Sprint 11 (pas de droit UPDATE sur `user_id`) ; remplacé par
+  « mise à jour, sinon insertion » (ADR-106).
+
 ## 8. En-têtes HTTP (`src/config/security-headers.ts`, appliqués par `next.config.ts`)
 
 `Content-Security-Policy` (`default-src 'self'`, `frame-ancestors 'none'`, `object-src 'none'`,
