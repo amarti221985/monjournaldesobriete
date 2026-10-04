@@ -1181,3 +1181,11 @@ acceptée : on en ajoute une nouvelle qui la remplace (statut « Remplacée par 
   échouait en production.
 - **Decision** : `saveReminder` / `saveLetter` mettent à jour la ligne de l'utilisateur, puis
   insèrent si aucune ligne n'a été modifiée. Les droits restent minimaux.
+
+## ADR-107 — Build de production avec webpack
+
+- **Contexte** : sur Hostinger, `next build` (Turbopack) échoue de façon répétée : le processus
+  Node lancé pour PostCSS (`globals.css`) se termine avant la connexion (limite de l'environnement
+  de build). Le même commit compile localement et dans un clone propre.
+- **Decision** : `npm run build` = `next build --webpack` (pas de processus PostCSS séparé). Le
+  développement local garde Turbopack (`next dev`). À réévaluer si l'hébergeur lève la limite.
